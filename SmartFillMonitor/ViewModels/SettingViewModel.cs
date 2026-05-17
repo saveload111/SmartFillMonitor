@@ -84,7 +84,7 @@ namespace SmartFillMonitor.ViewModels
         public SettingViewModel()
         {
 
-            RefreashPortList();
+            RefreshPortList();
             try
             {
                 LoadSettings();
@@ -110,7 +110,7 @@ namespace SmartFillMonitor.ViewModels
             AlarmSound = ds.AlarmSound;
             DebugLogMode = ds.DebugLogMode;
         }
-        private void RefreashPortList()
+        private void RefreshPortList()
         {
             PortNamesOptions.Clear();
             try

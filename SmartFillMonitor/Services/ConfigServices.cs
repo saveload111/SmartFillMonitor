@@ -29,11 +29,12 @@ namespace SmartFillMonitor.Services
                 var json = JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true });//将设置对象序列化为JSON字符串，使用WriteIndented选项使输出更易读
                 await File.WriteAllTextAsync(tempFilePath, json);//将JSON字符串写入临时文件
                 File.Move(tempFilePath, path, true);//将临时文件移动到目标路径，覆盖原文件，这样可以确保写入过程的原子性
-                //提示配置保存成功，返回true
+                LogService.Info($"配置文件已保存成功：{path}");
                 return true;
             }
             catch (Exception ex)
             {
+                LogService.Error($"保存配置文件失败：{ex.Message}");
                 return false;
             }
             finally
@@ -71,21 +72,19 @@ namespace SmartFillMonitor.Services
 
                     catch (JsonException jsonEx)
                     {
-
-                        BackCorruptFile(path);//备份损坏的文件，添加时间戳以避免覆盖之前的备份
-
-
+                        LogService.Error($"配置文件格式错误，将其重置为默认值：{jsonEx.Message}");
+                        BackCorruptFile(path);
                     }
                     catch (Exception ex)
                     {
-
+                        LogService.Error($"读取配置文件失败：{ex.Message}");
                     }
 
 
                 }
                 else
                 {
-                    //如果文件不存在提示用户
+                    LogService.Warn($"配置文件不存在{path}，将创建默认配置");
                 }
             }
 
