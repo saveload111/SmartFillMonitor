@@ -42,17 +42,6 @@
 
                     </Border>
                      
-                    <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter  Property="Background" Value="#3E3E42"/>
-                            <Setter  Property="Foreground" Value="White"/>
-                        </Trigger>
-                        <Trigger Property="IsChecked" Value="True">
-                            <Setter  Property="Background" Value="#37373D"/>
-                            <Setter  Property="Foreground" Value="White"/>
-                            <Setter  Property="BorderBrush" Value="{StaticResource AppAccentColor}"/>
-                        </Trigger>
-                    </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
@@ -116,5 +105,77 @@
             </Setter.Value>
         </Setter>
     </Style>
+    <!--TabItem Style-->
+    <Style TargetType="TabItem" x:Key="AppTabItemStyle">
+        <Setter Property="Foreground" Value="{StaticResource AppTextMuted}"/>
+        <Setter Property="Padding" Value="12,6"/>
+        <Setter Property="Margin" Value="4,0,4,0"/>
+        <Setter Property="MinWidth" Value="64"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TabItem">
+                    <Grid >
+                        <Border x:Name="Bd" Background="Transparent" BorderBrush="Transparent" BorderThickness="0" CornerRadius="6,6,0,0" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter  ContentSource="Header" HorizontalAlignment="Center" VerticalAlignment="Center" RecognizesAccessKey="True"/>
+                       </Border>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource AppBgHeader}"/>
+                            <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource AppAccentColor}"/>
+                             <Setter Property="Foreground" Value="{StaticResource AppTextMain}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False" >
+                            <Setter Property="Foreground" Value="#777777"/>
+                        </Trigger>
 
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="#2E2E2E"/>
+                            <Setter Property="Foreground" Value="{StaticResource AppTextMain}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <!--TabelControl Style-->
+    <Style TargetType="TabControl" x:Key="AppTabControlStyle">
+        <Setter Property="Background" Value="{StaticResource AppBgPanel}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource AppBorderBrush}"/>
+        <Setter Property="Padding" Value="6"/>
+        <Setter Property="ItemContainerStyle" Value="{StaticResource AppTabItemStyle}"/>    
+
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TabControl">
+                    <Grid >
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <Border Grid.Row="0" Background="Transparent" Padding="6,6,6,0" >
+                            <TabPanel x:Name="HeaderPanel" IsItemsHost="True" Margin=" 0,0,0,0"/>
+                                                                               </Border>
+                        <Border Grid.Row="1" Background="{StaticResource AppBgPanel}" Padding="{TemplateBinding Padding}" BorderBrush="{StaticResource AppBorderBrush}" CornerRadius="0,6,6,6" BorderThickness="1" Margin="0,8,0,0">
+                            <ContentPresenter x:Name="PART_SelectedContentHost" ContentSource="SelectedContent" Margin="8"/>
+                        </Border>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsSelected" Value="True">
+                         
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False" >
+    
+                        </Trigger>
+
+                        <Trigger Property="IsMouseOver" Value="True">
+                          
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+
+            </Setter.Value>
+        </Setter>
+    </Style>
 </ResourceDictionary>

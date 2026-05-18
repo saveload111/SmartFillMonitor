@@ -5,12 +5,72 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:SmartFillMonitor.Views"
              xmlns:smartFillMonitor="clr-namespace:SmartFillMonitor"
+             xmlns:hc="https://handyorg.github.io/handycontrol"
              mc:Ignorable="d" 
-             d:DesignHeight="450" d:DesignWidth="800">
-    <TabControl>
-        <TabItem Header="Log">
-            <ContentControl Content="{x:Static smartFillMonitor:App.LogView}"/>
+             d:DesignHeight="450" d:DesignWidth="1200">
+    <UserControl.Resources>
 
+    <ResourceDictionary>
+        <ResourceDictionary.MergedDictionaries>
+            <ResourceDictionary Source="pack://application:,,,/HandyControl;component/Themes/SkinDefault.xaml"/>
+            <ResourceDictionary Source="pack://application:,,,/HandyControl;component/Themes/Theme.xaml"/>
+        </ResourceDictionary.MergedDictionaries>
+    </ResourceDictionary>
+
+    </UserControl.Resources>
+    <TabControl>
+        <TabItem Header="Log" Style="{StaticResource AppTabItemStyle}">
+            <ContentControl Content="{x:Static smartFillMonitor:App.LogView}"/>
+        </TabItem>
+        <TabItem Header="LogAnalyze" Style="{StaticResource AppTabItemStyle}">
+            <Grid Margin="10">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <Border Grid.Row="0" Background="{StaticResource AppBgDark}" CornerRadius="4" Padding="8" Margin="0,0,0,10">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="从：" VerticalAlignment="Center" Foreground="White" Margin="0,0,5,0"/>
+                        <hc:DateTimePicker SelectedDateTime="{Binding StartDate}" Width="120" VerticalAlignment="Center"/>
+
+                        <TextBlock Text="到：" VerticalAlignment="Center" Foreground="White" Margin="10,0,5,0"/>
+                        <hc:DateTimePicker SelectedDateTime="{Binding EndDate}" Width="120" VerticalAlignment="Center"/>
+
+                        <TextBlock Text="等级：" VerticalAlignment="Center" Foreground="White" Margin="20,0,5,0"/>
+                        <ComboBox SelectedItem="{Binding SelectedLevel,UpdateSourceTrigger=PropertyChanged}" ItemsSource="{Binding LogLevels}"  Width="100" VerticalAlignment="Center"/>
+
+                        <TextBlock Text="搜索" VerticalAlignment="Center" Foreground="White" Margin="20,0,5,0"/>
+                        <TextBox Text="{Binding SearchText,UpdateSourceTrigger=PropertyChanged}" Width="200" VerticalAlignment="Center" ToolTip="输入消息或来源进行搜索">
+                            <TextBox.InputBindings>
+                                <KeyBinding Key ="Enter" Command="{Binding SearchCommand}"/>
+                            </TextBox.InputBindings>
+                             </TextBox>
+                        <Button Content="查询" Command="{Binding SearchCommand}" Margin="10,0,0,0" VerticalAlignment="Center" Width="80" Background="#007acc" Foreground="White"/>
+                        <Button Content="导出CSV" Command="{Binding ExportCommand}" Margin="10,0,0,0" VerticalAlignment="Center" Width="80" Background="{StaticResource AppBgPanel}" Foreground="White"/>
+                        
+                    </StackPanel>
+                
+                </Border>
+                <DataGrid Grid.Row="1" ItemsSource="{Binding Logs}" AutoGenerateColumns="True" IsReadOnly="True" HeadersVisibility="Column" GridLinesVisibility="Horizontal" BorderThickness="0"/>
+                <Grid Grid.Row="2" Margin="0,10,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" Visibility="{Binding IsBusy,Converter={StaticResource Boolean2VisibilityConverter}}">
+                        
+                        <TextBlock Text="正在查询..." VerticalAlignment="Center" Foreground="LimeGreen"  />
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" Orientation="Horizontal">
+                        <TextBlock Text="{Binding TotalCount, StringFormat=共 {0}条记录}" VerticalAlignment="Center" Foreground="Gray" Margin="0,0,20,0"/>
+                        <Button Content="上一页" Command="{Binding PreviousPageCommand}" Margin="0,0,5,0" VerticalAlignment="Center" Width="80" Background="{StaticResource AppBgPanel}" Foreground="White"/>
+                        <TextBlock Text="{Binding PageIndex, StringFormat= 第 {0} 页}" VerticalAlignment="Center" Foreground="White" Margin="0,0,20,0" FontWeight="Bold"/>
+                        <Button Content="下一页" Command="{Binding NextPageCommand}" Margin="0,0,5,0" VerticalAlignment="Center" Width="80" Background="{StaticResource AppBgPanel}" Foreground="White"/>
+                    </StackPanel>
+                </Grid>
+            </Grid>
         </TabItem>
     </TabControl>
 </UserControl>

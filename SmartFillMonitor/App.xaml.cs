@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Serilog;
+using SmartFillMonitor.Services;
 using SmartFillMonitor.ViewModels;
 using System.Configuration;
 using System.Data;
@@ -24,11 +25,13 @@ namespace SmartFillMonitor
         private const string LogTemplate = "[{Timestamp:yyyy-MM-dd HH:mm:ss fff} {Level}]({ThreadId}) {Message:lj}{NewLine}{Exception}";
         private const string LogPath = "logs\\log-.txt";
         private const string DbFilePath = "SmartFillMonitor.db";
+        private const string DbConnectionString = "Data Source=SmartFillMonitor.db";//SQLite数据库的连接字符串，指定数据库文件的位置和名称,给FreeSql使用
         public IServiceProvider ServiceProvider { get; private set; }// 保存已经构建的DI服务，让其他类可以解析到依赖
         protected  override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
             Configlogging();// 配置日志服务
+            InitializeCoreService();// 初始化核心服务，如数据库连接等
             var services = new ServiceCollection();// Create a new DI service collection，依赖注入的第一步
             ConfigureServices(services);
             ServiceProvider = services.BuildServiceProvider();   //供外部调用
@@ -37,6 +40,12 @@ namespace SmartFillMonitor
         protected override void OnExit(ExitEventArgs e)
         {
             base.OnExit(e);
+        }
+
+        private void InitializeCoreService()
+        {
+            Log.Debug("Initialize Database......");
+            DbProvider.Initialize(DbConnectionString);
         }
         private void Configlogging()
         {
