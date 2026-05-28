@@ -16,35 +16,35 @@
         </Border>
         <StackPanel Grid.Row="1" Margin="0,0,10,0">
                 <RadioButton  Style="{StaticResource NavItemStyle}" GroupName="Nav" IsChecked="True" Command="{Binding DataContext.NavigateCommand,RelativeSource={RelativeSource AncestorType=Window}}" Margin="0,10,0,0" CommandParameter="Dashboard">
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="图标" FontSize="16" Margin="10,0"/>
+<StackPanel Orientation="Horizontal">
+                    <TextBlock Text="📊" FontSize="16" Margin="10,0"/>
                     <TextBlock Text="主页监控" />
                 </StackPanel>   
             </RadioButton>
             <RadioButton Style="{StaticResource NavItemStyle}"  GroupName="Nav" IsChecked="False" Command="{Binding DataContext.NavigateCommand,RelativeSource={RelativeSource AncestorType=Window}}" Margin="0,10,0,0" CommandParameter="DataQuery">
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="图标" FontSize="16" Margin="10,0"/>
+<StackPanel Orientation="Horizontal">
+                    <TextBlock Text="🔍" FontSize="16" Margin="10,0"/>
                     <TextBlock Text="数据查询" />
                 </StackPanel>
             </RadioButton>
 
             <RadioButton Style="{StaticResource NavItemStyle}"  GroupName="Nav" IsChecked="False" Command="{Binding DataContext.NavigateCommand,RelativeSource={RelativeSource AncestorType=Window}}" Margin="0,10,0,0" CommandParameter="Logs">
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="图标" FontSize="16" Margin="10,0"/>
+<StackPanel Orientation="Horizontal">
+                    <TextBlock Text="📋" FontSize="16" Margin="10,0"/>
                     <TextBlock Text="运行日志" />
                 </StackPanel>
             </RadioButton>
 
             <RadioButton Style="{StaticResource NavItemStyle}"  GroupName="Nav" IsChecked="False" Command="{Binding DataContext.NavigateCommand,RelativeSource={RelativeSource AncestorType=Window}}" Margin="0,10,0,0" CommandParameter="Alarms">
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="图标" FontSize="16" Margin="10,0"/>
+<StackPanel Orientation="Horizontal">
+                    <TextBlock Text="🔔" FontSize="16" Margin="10,0"/>
                     <TextBlock Text="报警管理" />
                 </StackPanel>
             </RadioButton>
 
             <RadioButton Style="{StaticResource NavItemStyle}"  GroupName="Nav" IsChecked="False" Command="{Binding DataContext.NavigateCommand,RelativeSource={RelativeSource AncestorType=Window}}" Margin="0,10,0,0" CommandParameter="Settings">
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="图标" FontSize="16" Margin="10,0"/>
+<StackPanel Orientation="Horizontal">
+                    <TextBlock Text="⚙" FontSize="16" Margin="10,0"/>
                     <TextBlock Text="系统设置" />
                 </StackPanel>
             </RadioButton>

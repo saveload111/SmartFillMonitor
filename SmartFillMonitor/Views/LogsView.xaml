@@ -66,7 +66,7 @@
                     <StackPanel Grid.Column="2" Orientation="Horizontal">
                         <TextBlock Text="{Binding TotalCount, StringFormat=共 {0}条记录}" VerticalAlignment="Center" Foreground="Gray" Margin="0,0,20,0"/>
                         <Button Content="上一页" Command="{Binding PreviousPageCommand}" Margin="0,0,5,0" VerticalAlignment="Center" Width="80" Background="{StaticResource AppBgPanel}" Foreground="White"/>
-                        <TextBlock Text="{Binding PageIndex, StringFormat= 第 {0} 页}" VerticalAlignment="Center" Foreground="White" Margin="0,0,20,0" FontWeight="Bold"/>
+                        <TextBlock Text="{Binding PageIndex, StringFormat= 第 {0} 页}" VerticalAlignment="Center" Foreground="Gray" Margin="0,0,20,0" FontWeight="Bold"/>
                         <Button Content="下一页" Command="{Binding NextPageCommand}" Margin="0,0,5,0" VerticalAlignment="Center" Width="80" Background="{StaticResource AppBgPanel}" Foreground="White"/>
                     </StackPanel>
                 </Grid>

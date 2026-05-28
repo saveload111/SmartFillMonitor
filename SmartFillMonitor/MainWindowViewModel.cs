@@ -9,6 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Threading;
+using HandyControl.Controls;
 
 namespace SmartFillMonitor
 {
@@ -27,8 +28,10 @@ namespace SmartFillMonitor
             _timer.Interval = TimeSpan.FromSeconds(1);
             _timer.Tick += Timer_Tick;
             _timer.Start();
+            MainContent = _serviceProvider.GetRequiredService<DashBoardViewModel>();
         }
 
+        
         private void Timer_Tick(object? sender, EventArgs e)
         { 
          CurrentTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");

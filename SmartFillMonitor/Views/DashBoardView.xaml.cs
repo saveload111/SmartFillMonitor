@@ -31,5 +31,7 @@ namespace SmartFillMonitor.Views
                 DataContext = app.ServiceProvider.GetRequiredService<DashBoardViewModel>();
             }
         }
+
+       
     }
 }

@@ -46,7 +46,7 @@
             </Setter.Value>
         </Setter>
     </Style>
-    <DataTemplate DataType="{x:Type vm:DashBoardViewModel}">
+    <DataTemplate DataType="{x:Type vm:DashBoardViewModel}"><!--当ContentControl绑定到DashBoardViewModel时，自动使用DashBoardView作为其内容-->
         <views:DashBoardView/>
     </DataTemplate>
     <DataTemplate DataType="{x:Type vm:DashQueryViewModel}">
@@ -178,4 +178,60 @@
             </Setter.Value>
         </Setter>
     </Style>
+    <!--OutlineButton Style-->
+    <Style TargetType="Button" x:Key="OutlineButton">
+        <Setter Property="Foreground" Value="{StaticResource AppTextMain}"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="1"/>
+  
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="FontSize" Value="14"/>
+         <Setter Property="BorderBrush" Value="{StaticResource AppBorderBrush}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="2">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Margin}"/>
+                    </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter  Property="Background" Value="#3E3E42"/>
+                                <Setter  Property="Foreground" Value="White"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                </ControlTemplate>  
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <!--AppButton Style-->
+    <Style TargetType="Button" x:Key="AppButton">
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="Background" Value="{StaticResource AppAccentColor}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="12,8"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="2">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Margin}"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter  Property="Opacity" Value="0.9"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter  Property="Opacity" Value="0.5"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+
+    </Style>
+    <FontFamily x:Key="FontMono" >Consolas,Courier New</FontFamily>
 </ResourceDictionary>

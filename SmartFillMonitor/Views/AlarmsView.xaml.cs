@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using SmartFillMonitor.Services;
 using SmartFillMonitor.ViewModels;
 using System;
 using System.Collections.Generic;
@@ -31,5 +32,7 @@ namespace SmartFillMonitor.Views
                 DataContext = app.ServiceProvider.GetRequiredService<AlarmsViewModel>();
             }
         }
+
+     
     }
 }

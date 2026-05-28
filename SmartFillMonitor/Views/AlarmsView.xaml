@@ -4,9 +4,152 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:SmartFillMonitor.Views"
+             xmlns:hc="https://handyorg.github.io/handycontrol"
+             xmlns:converters="clr-namespace:SmartFillMonitor.Converters"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
-    <Grid Background="Red">
-            
-    </Grid>
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="pack://application:,,,/HandyControl;component/Themes/SkinDefault.xaml"/>
+                <ResourceDictionary Source="pack://application:,,,/HandyControl;component/Themes/Theme.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+            <converters:ZeroToVisibilityConverter x:Key="ZeroToVisibilityConverter"/>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+
+
+
+
+    <TabControl Style="{StaticResource AppTabControlStyle}">
+        <TabItem Header="活动报警" Style="{StaticResource AppTabItemStyle}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <Grid Grid.Row="0" Margin="12">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="当前活动报警" FontSize="20" FontWeight="Bold" Foreground="{StaticResource AppTextMain}"/>
+                        <Border Background="{StaticResource AppDanger}" CornerRadius="10" Padding="8,4" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding ActiveAlarmCount}" FontSize="14" FontWeight="Bold" Foreground="White" />
+                        </Border>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" >
+                        <Button Content="⟳刷新" Command="{Binding RefreshCommand}" HorizontalAlignment="Right" Width="90" Style="{StaticResource OutlineButton}"/>
+
+                    </StackPanel>
+                </Grid>
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding ActiveAlarms}" Margin="12,0,0,12">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Padding="5" Margin="0,0,0,10">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Background" Value="#2D1111" />
+                                            <Setter Property="BorderBrush" Value="{StaticResource AppBorderBrush}" />
+                                            <Setter Property="BorderThickness" Value="4,0,0,0" />
+
+                                        </Style>
+
+
+                                    </Border.Style>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                            <TextBlock FontWeight="Bold" FontSize="14">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Foreground" Value="#FFCCCC" />
+
+                                                    </Style>
+                                                </TextBlock.Style>
+             <Run Text="{Binding Code}"/>:<Run Text="{Binding Title}" />
+                                            </TextBlock>
+                                            <TextBlock Text="{Binding Description}"  Margin="0,5,0,0" Foreground="#AAAAAA" FontSize="14"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="20,0,0,0">
+                                            <TextBlock Text="{Binding TimeStr}" FontSize="12" Foreground="#888888" HorizontalAlignment="Right"/>
+                                            <Button Content="确认/复位" Style="{StaticResource AppButton}" Command="{Binding DataContext.AcknowledgeAlarmCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" Margin="0,5,0,0" Background="#555555" Width="90"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+
+
+                            </DataTemplate>
+
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+
+                <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="{Binding ActiveAlarmCount,Converter={StaticResource ZeroToVisibilityConverter}}">
+                    <TextBlock Text="✅" Foreground="{StaticResource AppSuccess}" FontSize="48" HorizontalAlignment="Center"/>
+                    <TextBlock Text="当前无活动报警" Foreground="{StaticResource AppTextMuted}" FontSize="16" Margin="0,10,0,0"/>
+
+                </StackPanel>
+            </Grid>
+
+        </TabItem>
+        <TabItem Header="历史报警" Style="{StaticResource AppTabItemStyle}" Height="27" Margin="4,0,4,0" VerticalAlignment="Top">
+            <Grid Background="{StaticResource AppBgDark}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <Border Grid.Row="0" Background="{StaticResource AppBgDark}" BorderBrush="{StaticResource AppBorderBrush}"
+                        BorderThickness="1" CornerRadius="4" Margin="12,12,12,8" Padding="12">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Grid.ColumnSpan="2">
+
+                            <TextBlock Text="开始时间" FontSize="20"  Foreground="{StaticResource AppTextMain}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <hc:DateTimePicker SelectedDateTime="{Binding HistoryStartDate,UpdateSourceTrigger=PropertyChanged}" FontSize="12" Padding="4" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
+
+                            <TextBlock Text="至" FontSize="20"  Foreground="{StaticResource AppTextMain}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <hc:DateTimePicker SelectedDateTime="{Binding HistoryEndDate,UpdateSourceTrigger=PropertyChanged}" FontSize="12" Padding="4" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="4" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="450,0,0,0">
+                            <Button Content="查询" Command ="{Binding LoadHistoryAlarmsCommand}" Style="{StaticResource OutlineButton}" BorderBrush="Green" Width="80" Margin="10,0,8,0" HorizontalAlignment="Right"/>
+
+                        </StackPanel>
+
+                    </Grid>
+
+
+                </Border>
+                <Border Grid.Row="1" Background="{StaticResource AppBgPanel}" BorderBrush="{StaticResource AppBorderBrush}" BorderThickness="1" CornerRadius="4" Margin="12,8,12,12">
+                    <Grid>
+                        <DataGrid ItemsSource="{Binding HistoryAlarms}" AutoGenerateColumns="False" IsReadOnly="True" >
+                            <DataGrid.Columns>
+
+                                <DataGridTextColumn Header="Code" Binding="{Binding Code}"/>
+                                <DataGridTextColumn Header="Title" Binding="{Binding Title}"/>
+                                <DataGridTextColumn Header="Description" Binding="{Binding Description}"/>
+                                <DataGridTextColumn Header="TriggleTime" Binding="{Binding TimeStr}"/>
+                            </DataGrid.Columns>
+
+                        </DataGrid>
+                    </Grid>
+                </Border>
+            </Grid>
+
+        </TabItem>
+      
+
+    </TabControl>
+
+
 </UserControl>
