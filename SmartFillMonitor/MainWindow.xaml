@@ -22,11 +22,38 @@
         <UserControls:NavigationMenu Grid.Column="0" Grid.RowSpan="2"/>
         <!--顶部header-->
         <Border Grid.Column="1" Grid.Row="0" Background="{StaticResource AppBgHeader}" BorderBrush="{StaticResource AppBorderBrush}" BorderThickness="0,0,0,1">
-        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-            <TextBlock Text="{Binding CurrentTime}"  Foreground="{StaticResource AppTextMuted}" FontFamily="Consolas" FontSize="14" VerticalAlignment="Center" Margin="0,0,20,0 "/>
+            <Grid Margin="20,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Foreground="{StaticResource AppTextMuted}" VerticalAlignment="Center" FontSize="14" >
+                    <Run Text="当前生成批次："/>
+                    <Run Text="{Binding CurrentBatchNo}" FontWeight="SemiBold"/>
+                  </TextBlock>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right">
+                    <UserControls:StatusIndicator StatusText="PLC在线" IsOnline="{Binding IsPlcConnected}" Margin="0,0,20,0"/>
+                    <UserControls:StatusIndicator StatusText="数据库写入中" IsWarning="True" IsOnline="True" Margin="0,0,20,0"/>
+                    <UserControls:StatusLight State="{Binding IndicatorState}" Margin="0,0,20,0" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding CurrentTime}"  Foreground="{StaticResource AppTextMuted}" FontFamily="Consolas" FontSize="14" VerticalAlignment="Center" Margin="0,0,20,0 "/>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0">
+                        <TextBlock Text="👤" FontSize="16" Margin="0,0,5,0"/>
+                        <TextBlock Text="{Binding CurrentUserDisplayName}" FontSize="16" Foreground="{StaticResource AppTextMuted}" Margin="0,0,5,0"/>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button Content="登录" Style="{StaticResource OutlineButton}" Command="{Binding LoginCommand}" Margin="0,0,6,0" Padding="8,2"/>
+                        <Button Content="X" Style="{StaticResource OutlineButton}" Command="{Binding ExecuteExitCommand}"/>
+                    </StackPanel>
+
+
+                </StackPanel>
+            </Grid>
             
             
-        </StackPanel>
+            
+            
         </Border >
         <ContentControl Grid.Column="1" Grid.Row="1" Margin="20" Background="{StaticResource AppBgDark}" Content="{Binding MainContent}"/>
     </Grid>

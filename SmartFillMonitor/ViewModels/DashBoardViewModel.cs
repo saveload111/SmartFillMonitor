@@ -29,7 +29,10 @@ namespace SmartFillMonitor.ViewModels
 
         private double currentTemp;
 
+  
 
+        [ObservableProperty]
+        private LightState indicatorState = LightState.Off;
 
         [ObservableProperty]
 
@@ -165,6 +168,7 @@ namespace SmartFillMonitor.ViewModels
             try
             {
                 DeviceStatus = "启动中...";
+                IndicatorState = LightState.Green;
                 await PlcService.WriteCommandStateAsync("Start", true);
                 await Task.Delay(2000);
                 DeviceStatus = "运行中...";
@@ -173,6 +177,7 @@ namespace SmartFillMonitor.ViewModels
             catch (Exception ex)
             {
                 DeviceStatus = "启动失败";
+                IndicatorState = LightState.Red;
                 LogService.Error("发送启动命令到PLC失败", ex);
             }
 
@@ -185,6 +190,7 @@ namespace SmartFillMonitor.ViewModels
             try
             {
                 DeviceStatus = "停止中...";
+                IndicatorState = LightState.Red;
                 await PlcService.WriteCommandStateAsync("Stop", true);
                 await Task.Delay(2000);
                 DeviceStatus = "已停止";
@@ -193,6 +199,7 @@ namespace SmartFillMonitor.ViewModels
             catch (Exception ex)
             {
                 DeviceStatus = "停止失败";
+                IndicatorState = LightState.Red;
                 LogService.Error("发送停止命令到PLC失败", ex);
             }
 
@@ -210,15 +217,18 @@ namespace SmartFillMonitor.ViewModels
             try
             {
                 DeviceStatus = "复位中...";
+                IndicatorState = LightState.Yellow;
                 await PlcService.WriteCommandStateAsync("Stop", false);
                 await Task.Delay(2000);
                 await PlcService.WriteCommandStateAsync("Reset", false);
                 DeviceStatus = "已就绪";
+                IndicatorState = LightState.Off;
                 LogService.Info("发送复位脉冲到PLC");
             }
             catch (Exception ex)
             {
                 DeviceStatus = "复位失败";
+                IndicatorState = LightState.Red;
                 LogService.Error("发送复位脉冲到PLC失败", ex);
             }
 
