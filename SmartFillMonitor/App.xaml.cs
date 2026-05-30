@@ -43,6 +43,10 @@ namespace SmartFillMonitor
                 ServiceProvider = services.BuildServiceProvider();   //供外部调用
                 await InitializeCoreService();// 初始化核心服务，如数据库连接等
                 await InitialLoginFolowAsync();
+                LogService.Debug("Initalizing PLC Service...");
+                var plcSettings = await ConfigServices.LoadDeviceSettingsAsync();
+                await PlcService.Initialize(plcSettings);
+                LogService.Info("Core Services Initialized successfully");
 
             }
             catch (Exception ex)
@@ -66,10 +70,7 @@ namespace SmartFillMonitor
             Log.Debug("Initialize Database......");
             DbProvider.Initialize(DbConnectionString);
             await UserService.InitializeAsync();//确保数据库结构存在
-            LogService.Debug("Initalizing PLC Service...");
-            var plcSettings = await ConfigServices.LoadDeviceSettingsAsync();
-            await PlcService.Initialize(plcSettings);
-            LogService.Info("Core Services Initialized successfully");
+           
         }
 
 

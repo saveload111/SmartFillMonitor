@@ -100,8 +100,7 @@ namespace SmartFillMonitor.Services;
             _modbusMaster.Transport.ReadTimeout = 1000;//传输超时时间设置为1000ms
             _modbusMaster.Transport.WriteTimeout = 1000;
 
-            ConnectionChanged?.Invoke(null, true);
-            LogService.Info($"PLC连接成功{_serialPort.PortName}");
+            LogService.Info($"PLC串口打开成功{_serialPort.PortName}");
 
              _cts= new CancellationTokenSource();
             _=Task.Run(() =>PollDataLoop(_cts.Token));
@@ -171,6 +170,7 @@ namespace SmartFillMonitor.Services;
             {
                 if (!IsConnected)
                 {
+                    ConnectionChanged?.Invoke(null, false);
                     await Task.Delay(1000, token);
                     continue;
 
@@ -179,9 +179,10 @@ namespace SmartFillMonitor.Services;
                 if (state != null)
                 {
                     errCount = 0;
+                    ConnectionChanged?.Invoke(null, true);
                     DataReceived?.Invoke(null, state);
                 }
-                await Task.Delay(200, token);//200ms轮询间隔
+                await Task.Delay(200, token);
 
             }
             catch (OperationCanceledException ex)
@@ -240,14 +241,15 @@ namespace SmartFillMonitor.Services;
             }
             return new DeviceStates
             {
+                //生产和时间类数据需要除以100得到实际值
                 ActualCount = registers[ModbusConfigHelper.ActualCount],
                 TargetCount = registers[ModbusConfigHelper.TargetCount],
-                CurrentTemp = registers[ModbusConfigHelper.CurrentTemp],
-                SettingTemp = registers[ModbusConfigHelper.SettingTemp],
-                RunningTime = registers[ModbusConfigHelper.RunningTime],
-                CurrentCycleTime = registers[ModbusConfigHelper.CurrentCycleTime],
-                StandardCycleTime = registers[ModbusConfigHelper.StandardCycleTime],
-                LiquidLevel = registers[ModbusConfigHelper.LiquidLevel],
+                CurrentTemp = registers[ModbusConfigHelper.CurrentTemp]/100.0,
+                SettingTemp = registers[ModbusConfigHelper.SettingTemp]/100.0,
+                RunningTime = registers[ModbusConfigHelper.RunningTime]/100.0,
+                CurrentCycleTime = registers[ModbusConfigHelper.CurrentCycleTime]/100.0,
+                StandardCycleTime = registers[ModbusConfigHelper.StandardCycleTime]/100.0,
+                LiquidLevel = registers[ModbusConfigHelper.LiquidLevel]/100.0,
                 ValueOpen = registers[ModbusConfigHelper.ValueOpen] == 1,//数字1表示打开阀门，0表示关闭
                 BarCode = barcode
 
@@ -255,12 +257,7 @@ namespace SmartFillMonitor.Services;
             };
 
         }
-        catch (Exception ex)
-        {
-            LogService.Warn($"读取数据失败:{ex.Message}");
-           return null;
-        }
-        finally 
+        finally
         { _ioLock.Release(); }
 
 

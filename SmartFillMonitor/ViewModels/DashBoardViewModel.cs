@@ -60,7 +60,7 @@ namespace SmartFillMonitor.ViewModels
 
         [ObservableProperty]
 
-        private bool valueOpen;
+        private bool valueOpen = true;
 
         [ObservableProperty]
 
