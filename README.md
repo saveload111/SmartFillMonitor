@@ -86,7 +86,7 @@ SmartFillMonitor/
 git clone https://github.com/saveload111/SmartFillMonitor.git
 cd SmartFillMonitor
 dotnet build
-dotnet run
+dotnet run --project SmartFillMonitor/SmartFillMonitor.csproj
 ```
 
 首次启动自动创建 admin/admin 默认账户。
