@@ -28,22 +28,26 @@
 - 9 种报警码：低液位 / 溢出 / 泄漏 / 低压 / 高温 / 传感器故障 / 通信故障 / 系统错误
 - 完整生命周期：触发 → 弹窗通知 → 确认 → 恢复
 - 活动报警 + 历史查询
-- <img width="1578" height="871" alt="屏幕截图 2026-06-09 000221" src="https://github.com/user-attachments/assets/2fb22f25-7b95-4358-a882-9f99879c3355" />
+- <img width="3839" height="2101" alt="屏幕截图 2026-06-09 000847" src="https://github.com/user-attachments/assets/25b757c5-eeea-41fa-b6e1-e5f0b828d082" />
+
 
 ### 生产追溯
 - 条码变化自动记录生产数据到 SQLite
 - 日期范围查询 + 分页 + CSV 导出（CsvHelper, BOM）
-- <img width="3832" height="2086" alt="屏幕截图 2026-06-09 000859" src="https://github.com/user-attachments/assets/7cae0b68-d025-4355-9b4b-7a22df19a0ab" />
+- <img width="3838" height="2096" alt="屏幕截图 2026-06-09 000734" src="https://github.com/user-attachments/assets/d82462bc-7aa4-40a6-8f43-72de0e0a5417" />
+
 
 ### 日志系统
 - Serilog 四路输出：RichTextBox 实时 / 文件滚动 / SQLite 持久化 / Console
 - 按日期 + 级别 + 关键字组合查询
-- <img width="3838" height="2096" alt="屏幕截图 2026-06-09 000734" src="https://github.com/user-attachments/assets/2fa68482-5e88-44f7-8b7c-62c32d9b1bb7" />
+- <img width="3833" height="2087" alt="屏幕截图 2026-06-09 000750" src="https://github.com/user-attachments/assets/d51f28c2-4b3f-4c4b-9f36-b7048ebf18dd" />
+
 
 ### 用户管理
 - SHA256 + 盐密码哈希
 - Admin / Engineer / Operator 角色权限
 - 首次启动自动创建 admin 和 engineer 默认账户
+- <img width="1578" height="871" alt="屏幕截图 2026-06-09 000221" src="https://github.com/user-attachments/assets/0de96b26-69b9-4610-bd4d-e628414cab85" />
 
 ---
 
