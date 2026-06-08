@@ -83,13 +83,9 @@ SmartFillMonitor/
 ## 快速开始
 
 ```bash
-# 克隆
 git clone https://github.com/saveload111/SmartFillMonitor.git
-
-# 构建
+cd SmartFillMonitor
 dotnet build
-
-# 运行
 dotnet run
 ```
 
