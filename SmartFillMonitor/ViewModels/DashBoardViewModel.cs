@@ -236,10 +236,5 @@ namespace SmartFillMonitor.ViewModels
 
         }
 
-
-
-
-
-
     }
 }

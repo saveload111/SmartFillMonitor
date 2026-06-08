@@ -64,8 +64,26 @@ namespace SmartFillMonitor.ViewModels
                 var alarm = AlarmUIModel.FromAlarmRecord(record);
                 ActiveAlarms.Insert(0, alarm);// 将新的报警记录添加到ActiveAlarms集合的开头，这样最新的报警会显示在列表的顶部
                 ActiveAlarmCount = ActiveAlarms.Count;
-                LogService.Error($"新报警:  {alarm.Code} - {alarm.Title} ");
+                LogService.Warn($"新报警:  {alarm.Code} - {alarm.Title} ");
             });
+        }
+
+        [RelayCommand]
+        private async Task TestAlarmAsync()
+        {
+            // 先恢复旧的测试报警
+            await AlarmService.RecoverAlarmAsync(AlarmCode.HighTemperature);
+
+            var record = new AlarmRecord
+            {
+                Code = AlarmCode.HighTemperature,
+                Severity = AlarmSeverity.Error,
+                StartTime = DateTime.Now,
+                IsActive = true,
+                Description = "测试报警：加热温度过高",
+                Message = $"测试触发时间：{DateTime.Now:HH:mm:ss}"
+            };
+            await AlarmService.TriggerAlarmAsync(record);
         }
 
         [RelayCommand]
@@ -90,30 +108,30 @@ namespace SmartFillMonitor.ViewModels
 
         }
         [RelayCommand]
-        private async Task AcknowledgeAlarmAsync(AlarmUIModel alarm)// 确认报警的命令，绑定到UI上的确认按钮，接受一个AlarmUIModel对象作为参数，表示要确认的报警记录
+        private async Task AcknowledgeAlarmAsync(AlarmUIModel alarm)
         {
             if (alarm == null) return;
             try
             {
-                var success = await AlarmService.AcknowledgeAlarmAsync(alarm.Id,"");//调用AlarmService的AcknowledgeAlarmAsync方法来确认这个报警记录，传递报警ID和操作人名称作为参数
-                if (success)
+                var op = UserService.CurrentUser?.UserName ?? "";
+                await AlarmService.AcknowledgeAlarmAsync(alarm.Id, op);
+
+                // 解析报警码并恢复
+                var codeStr = alarm.Code?.Replace("E", "");
+                if (int.TryParse(codeStr, out var codeInt))
                 {
-                    Application.Current.Dispatcher.Invoke(() =>
-                    {
-
-
-
-                        ActiveAlarms.Remove(alarm);//如果确认成功，从ActiveAlarms集合中移除这个报警记录，这样UI上就不会再显示这个报警了
-                        ActiveAlarmCount = ActiveAlarms.Count;
-
-                    });
+                    await AlarmService.RecoverAlarmAsync((AlarmCode)codeInt);
                 }
+
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    ActiveAlarms.Remove(alarm);
+                    ActiveAlarmCount = ActiveAlarms.Count;
+                });
             }
             catch (Exception ex)
             {
-
-
-                LogService.Error($"确认报警异常: {alarm.Code}", ex);//如果在确认报警的过程中发生任何异常，记录错误日志，输出异常信息和堆栈跟踪等细节
+                LogService.Error($"确认报警异常: {alarm.Code}", ex);
             }
         }
     }

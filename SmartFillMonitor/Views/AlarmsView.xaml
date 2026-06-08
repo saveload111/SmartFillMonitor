@@ -38,7 +38,7 @@
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" >
                         <Button Content="⟳刷新" Command="{Binding RefreshCommand}" HorizontalAlignment="Right" Width="90" Style="{StaticResource OutlineButton}"/>
-
+                        <Button Content="⚠ 测试" Command="{Binding TestAlarmCommand}" HorizontalAlignment="Right" Width="90" Background="{StaticResource AppDanger}" Margin="0,0,10,0"/>
                     </StackPanel>
                 </Grid>
                 <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
