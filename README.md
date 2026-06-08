@@ -118,6 +118,3 @@ dotnet run
 
 ---
 
-## 作者
-
-[孙林](https://github.com/saveload111)
