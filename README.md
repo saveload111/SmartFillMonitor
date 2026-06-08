@@ -12,6 +12,8 @@
 - 温度趋势实时曲线（LiveCharts）
 - 最新报警列表 + 设备状态指示灯
 - 一键启动 / 停止 / 复位
+- <img width="3838" height="1996" alt="屏幕截图 2026-06-09 000707" src="https://github.com/user-attachments/assets/4272e275-9bdf-4e05-adcf-33808145de9a" />
+
 
 ### Modbus RTU 通信
 - NModbus4 串口管理，200ms 轮询
