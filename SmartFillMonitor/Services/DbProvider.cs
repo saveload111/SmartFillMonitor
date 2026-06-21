@@ -27,10 +27,12 @@ namespace SmartFillMonitor.Services
                     },
                     (cmd, traceLog) =>
                     {
-                        Serilog.Log.Debug($"[SQL] {cmd.CommandText}\r\n ->{traceLog}");
+                        Serilog.Log.Verbose($"[SQL] {cmd.CommandText}\r\n ->{traceLog}");
                     })//监视SQL命令的执行，可以在这里添加日志记录或性能分析等功能，这里使用Serilog记录调试级别的日志，输出SQL命令文本和执行跟踪信息
                     .UseLazyLoading(false)
-                    .Build();//调用Build方法来构建一个IFreeSql对象，并将其赋值给Fsql属性，这样就完成了数据库连接的初始化，可以在应用程序中使用Fsql来执行数据库操作
+                    .Build();
+                // 开启WAL模式：读写并发，导出/查询不阻塞写入
+                Fsql.Ado.ExecuteNonQuery("PRAGMA journal_mode=WAL;");
             }
         }
     }

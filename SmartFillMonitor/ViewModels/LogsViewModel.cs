@@ -70,19 +70,67 @@ namespace SmartFillMonitor.ViewModels
         [RelayCommand]
         private async Task ExportAsync()
         {
-            var query = BuildQuery();
-            var allData = await query.OrderByDescending(x => x.Timestamp).ToListAsync();
-            if (allData.Count == 0)
+            var dlg = new Microsoft.Win32.SaveFileDialog
             {
-                MessageBox.Show("没有找到符合条件的日志记录");
-                return;
+                Filter = "CSV 文件|*.csv",
+                FileName = $"Logs_Export_{DateTime.Now:yyyyMMddHHmmss}.csv"
+            };
+            if (dlg.ShowDialog() != true) return;
+
+            IsBusy = true;
+            try
+            {
+                var query = BuildQuery();
+                // 先查总数，避免一次性加载全部数据到内存
+                var total = (int)await query.CountAsync();
+                if (total == 0)
+                {
+                    MessageBox.Show("没有找到符合条件的日志记录");
+                    return;
+                }
+
+                const int batchSize = 1000;
+                int page = 0;
+
+                await using var writer = new StreamWriter(dlg.FileName, false, Encoding.UTF8);
+                var config = new CsvHelper.Configuration.CsvConfiguration(System.Globalization.CultureInfo.InvariantCulture)
+                {
+                    Delimiter = ";",
+                };
+                using var csv = new CsvHelper.CsvWriter(writer, config);
+
+                csv.WriteField("时间");
+                csv.WriteField("等级");
+                csv.WriteField("内容");
+                csv.WriteField("异常");
+                await csv.NextRecordAsync();
+
+                while (true)
+                {
+                    var batch = await query.OrderByDescending(x => x.Timestamp)
+                        .Skip(page * batchSize).Take(batchSize).ToListAsync();
+                    if (batch.Count == 0) break;
+
+                    foreach (var log in batch)
+                    {
+                        csv.WriteField(log.Timestamp.ToString("yyyy-MM-dd HH:mm:ss"));
+                        csv.WriteField(log.Level);
+                        csv.WriteField(log.RenderedMessage ?? "");
+                        csv.WriteField(log.Exception?.Replace("\n", " ").Replace("\r", "") ?? "");
+                        await csv.NextRecordAsync();
+                    }
+                    page++;
+                    if (batch.Count < batchSize) break;
+                }
+
+                MessageBox.Show($"导出成功：{total} 条记录 → {Path.GetFileName(dlg.FileName)}");
             }
-                var lines = new List<string> { "时间,等级,内容,异常" };
-                lines.AddRange(allData.Select(x => $"{x.Timestamp:yyyy-MM-dd HH:mm:ss},{x.Level},\"{ x.RenderedMessage.Replace("\"", "\"\"")}\",\"{x.Exception?.Replace("\n", "")}\""));//将日志记录转换为CSV格式的字符串，注意对消息内容中的双引号进行转义，并去除异常信息中的换行符
-                var path = $"Logs_Export_{DateTime.Now:yyyyMMddHHmmss}.csv";
-                await File.WriteAllLinesAsync(path, lines, Encoding.UTF8);
-                MessageBox.Show($"日志已成功导出到{Path.GetFullPath(path)}");
-            
+            catch (Exception ex)
+            {
+                LogService.Error("导出日志失败", ex);
+                MessageBox.Show($"导出失败：{ex.Message}");
+            }
+            finally { IsBusy = false; }
         }
 
         [RelayCommand]
