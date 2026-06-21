@@ -77,39 +77,51 @@ namespace SmartFillMonitor.ViewModels
 
             try
             {
-                var start = StartDate ?? DateTime.Today.AddDays(-7);
+                var start = StartDate ?? DateTime.Today.AddDays(-30);
                 var end = EndDate ?? DateTime.Today;
-                var endInclusive = end.AddDays(1).AddMilliseconds(-1);
-                var query = DbProvider.Fsql.Select<ProductionRecord>()
-                    .Where(r => r.Time >= start && r.Time <= endInclusive)
-                    .OrderByDescending(r => r.Time);
+                var endInclusive = end.Date.AddDays(1).AddMilliseconds(-1);
 
-                var total = (int)await query.CountAsync();
+                // 先查总数
+                var total = (int)await DbProvider.Fsql.Select<ProductionRecord>()
+                    .Where(x => x.Time >= start && x.Time <= endInclusive)
+                    .CountAsync();
+
                 if (total == 0)
                 {
                     MessageBox.Show("没有找到符合条件的生产记录");
                     return;
                 }
 
-                const int batchSize = 1000;
+                // 分批流式导出，避免一次性加载全部数据到内存
+                const int batchSize = 5000;
                 int page = 0;
 
                 await using var writer = new StreamWriter(dlg.FileName, false, Encoding.UTF8);
-              
                 var config = new CsvConfiguration(CultureInfo.InvariantCulture)
                 {
                     Delimiter = ";",
                     HasHeaderRecord = true,
                 };
-                using var csv = new CsvWriter(writer, config);
-                await writer.WriteLineAsync("时间,批次号,实际产量,目标产量,设定温度,实际温度,节拍,是否NG");
+                await using var csv = new CsvWriter(writer, config);
+
+                // 写表头
+                csv.WriteHeader<ProductionRecord>();
+                await csv.NextRecordAsync();
+
                 while (true)
                 {
-                    var batch = await query.Skip(page * batchSize).Take(batchSize).ToListAsync();
+                    var batch = await DbProvider.Fsql.Select<ProductionRecord>()
+                        .Where(x => x.Time >= start && x.Time <= endInclusive)
+                        .OrderByDescending(r => r.Time)
+                        .Skip(page * batchSize)
+                        .Take(batchSize)
+                        .ToListAsync();
+
                     if (batch.Count == 0) break;
 
-                    foreach (var r in batch)
-                        await writer.WriteLineAsync($"{r.Time:yyyy-MM-dd HH:mm:ss},{r.BatchNo},{r.ActualCount},{r.TargetCount},{r.SettingTemp:F1},{r.ActualTemp:F1},{r.CycleTime:F2},{r.IsNG}");
+                    await csv.WriteRecordsAsync(batch);
+                    // 立即 flush，释放 batch 内存
+                    await csv.FlushAsync();
 
                     page++;
                     if (batch.Count < batchSize) break;
@@ -121,7 +133,6 @@ namespace SmartFillMonitor.ViewModels
             {
                 LogService.Error("导出生产记录失败", ex);
                 MessageBox.Show($"导出失败：{ex.Message}");
-
             }
         }
     }
