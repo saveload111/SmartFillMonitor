@@ -18,7 +18,6 @@ namespace SmartFillMonitor.ViewModels
         {
            _=LoadLogsAsync();
 
-
         }
 
 
@@ -32,7 +31,7 @@ namespace SmartFillMonitor.ViewModels
         [ObservableProperty]
         private string _selectedLevel = "All";
 
-        private const int PageSize = 50; //每页显示的日志记录数
+        private const int PageSize = 50;
         public ObservableCollection<string> LogLevels { get; } = new ObservableCollection<string>
       {
 
@@ -51,8 +50,7 @@ namespace SmartFillMonitor.ViewModels
         private ObservableCollection<Models.SystemLog> _logs = new ObservableCollection<Models.SystemLog>();
 
         [ObservableProperty]
-        private bool _isBusy; //指示数据库操作是否忙碌
-
+        private bool _isBusy;
 
         [ObservableProperty]
         private int _totalCount;
@@ -81,7 +79,6 @@ namespace SmartFillMonitor.ViewModels
             try
             {
                 var query = BuildQuery();
-                // 先查总数，避免一次性加载全部数据到内存
                 var total = (int)await query.CountAsync();
                 if (total == 0)
                 {
@@ -176,9 +173,9 @@ namespace SmartFillMonitor.ViewModels
             {
        
                 var query = BuildQuery();
-                TotalCount =(int) await query.CountAsync();//获取满足条件的日志记录总数
-                var data =await query.OrderByDescending(x => x.Timestamp).Page(PageIndex, PageSize).ToListAsync();//根据时间戳降序排序，并分页查询日志记录
-                Logs = new ObservableCollection<Models.SystemLog>(data);//将查询结果转换为ObservableCollection，更新UI绑定的日志列表
+                TotalCount =(int) await query.CountAsync();
+                var data =await query.OrderByDescending(x => x.Timestamp).Page(PageIndex, PageSize).ToListAsync();
+                Logs = new ObservableCollection<Models.SystemLog>(data);
             }
                                          
             catch (Exception ex)
@@ -198,19 +195,18 @@ namespace SmartFillMonitor.ViewModels
         }
         private FreeSql.ISelect<Models.SystemLog> BuildQuery()
         {
-            var query = Services.DbProvider.Fsql.Select<Models.SystemLog>();//从数据库中查询日志记录
+            var query = Services.DbProvider.Fsql.Select<Models.SystemLog>();
             var start = StartDate.ToString("yyyy-MM-dd");
             var end = EndDate.ToString("yyyy-MM-dd");
-            //Sqlite 存储的日期格式为IOSO8601字符串，比如2026-05-17T21:05:27.272  查询时需要使用date函数进行转换
             query = query.Where($"date(\"Timestamp\") >= '{start}' AND date(\"Timestamp\") <= '{end}'");
             if(!string.IsNullOrEmpty(SearchText))
             { 
-              query = query.Where(x => x.RenderedMessage.Contains(SearchText));//根据搜索文本过滤日志记录
+              query = query.Where(x => x.RenderedMessage.Contains(SearchText));
 
             }
             if(SelectedLevel != "All")
             {
-                query = query.Where(x => x.Level.Contains(SelectedLevel));//根据日志级别过滤日志记录
+                query = query.Where(x => x.Level.Contains(SelectedLevel));
             }
             return query;
         }

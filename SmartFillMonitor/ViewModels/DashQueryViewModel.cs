@@ -39,13 +39,30 @@ namespace SmartFillMonitor.ViewModels
         [RelayCommand]
         private async Task QueryAsync()
         {
-            var start = StartDate ?? DateTime.Today.AddDays(-7);
-            var end = EndDate ?? DateTime.Today;
-            var endInclusive = end.AddDays(1).AddMicroseconds(-1);
-            var list = await DataService.QueryRecordAsync(start, endInclusive);
-            Records.Clear();
-            foreach (var r in list.OrderByDescending(r => r.Time))
-                Records.Add(r);
+            try
+            {
+                var start = StartDate ?? DateTime.Today.AddDays(-30);
+                var end = EndDate ?? DateTime.Today;
+                var endInclusive = end.Date.AddDays(1).AddMilliseconds(-1);
+                
+                LogService.Debug($"查询生产记录：{start:yyyy-MM-dd} ~ {end:yyyy-MM-dd}");
+                
+                var list = await DataService.QueryRecordAsync(start, endInclusive);
+                
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    Records.Clear();
+                    foreach (var r in list.OrderByDescending(r => r.Time))
+                        Records.Add(r);
+                });
+                
+                LogService.Info($"查询完成，共 {list.Count} 条记录");
+            }
+            catch (Exception ex)
+            {
+                LogService.Error("查询生产记录失败", ex);
+                MessageBox.Show($"查询失败：{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         [RelayCommand]

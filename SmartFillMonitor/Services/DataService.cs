@@ -17,20 +17,18 @@ namespace SmartFillMonitor.Services
 
 
 
-
         }
 
 
 
-        public static async Task<List<ProductionRecord>> QueryRecordAsync(DateTime start,DateTime end)
+        public static async Task<List<ProductionRecord>> QueryRecordAsync(DateTime start, DateTime end)
         {
-         return   await DbProvider.Fsql.Select<ProductionRecord>()
-                .Where(x=>x.Time>=start && x.Time<=end)
+            return await DbProvider.Fsql.Select<ProductionRecord>()
+                .Where($"Time >= {start} and Time <= {end}")
                 .ToListAsync();
 
-
-
         }
+
         public static async Task ExportToCsvAsync(List<ProductionRecord> records, string filePath)
         {
             if (records.Count == 0) return;

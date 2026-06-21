@@ -233,7 +233,7 @@
 
                     <TextBlock Text="温度趋势曲线（最近1小时）" Foreground="{StaticResource AppTextMuted}" FontSize="14" Margin="0,0,0,15"/>
                     <Border Grid.Row="1" x:Name="ChartContainer" Background="#111" BorderBrush="#333" BorderThickness="1" MinHeight="150">
-                        <lvc:CartesianChart Series="{Binding TempLiveCharts}" LegendLocation="None" Background="Transparent" DisableAnimations="False" Margin="8">
+                        <lvc:CartesianChart x:Name="TempChart" Series="{Binding TempLiveCharts}" LegendLocation="None" Background="Transparent" DisableAnimations="False" Margin="8">
                             <lvc:CartesianChart.AxisX>
                                 <lvc:Axis IsEnabled="True">
                                     <lvc:Axis.Separator>

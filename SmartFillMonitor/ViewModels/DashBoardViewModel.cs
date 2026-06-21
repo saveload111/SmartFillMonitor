@@ -76,6 +76,7 @@ namespace SmartFillMonitor.ViewModels
         public DashBoardViewModel()
         {
             PlcService.DataReceived += OnDataReceived;
+            PlcService.ConnectionChanged += OnConnectionChanged;
             AlarmService.AlarmTriggered += AlarmService_AlarmTriggered;
 
             Application.Current.Dispatcher.BeginInvoke(() =>
@@ -85,13 +86,32 @@ namespace SmartFillMonitor.ViewModels
                     new ColumnSeries
                     {
                         Title = "温度趋势",
-                        Values = new LiveCharts.ChartValues<double>(),
+                        Values = new ChartValues<double>(),
                         Fill = Brushes.Gray,
                         Stroke = Brushes.Blue,
                         StrokeThickness = 1,
                     }
                 };
             });
+        }
+
+        private void OnConnectionChanged(object? sender, bool connected)
+        {
+            if (!connected)
+            {
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    ActualCount = 0;
+                    TargetCount = 0;
+                    CurrentTemp = 0;
+                    SettingTemp = 0;
+                    RunningTime = 0;
+                    CurrentCycleTime = 0;
+                    StandardCycleTime = 0;
+                    LiquidLevel = 0;
+                    ValueOpen = false;
+                });
+            }
         }
 
         private void AlarmService_AlarmTriggered(object? sender, AlarmRecord e)

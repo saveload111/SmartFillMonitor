@@ -1,19 +1,30 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using SmartFillMonitor.Models;
+using SmartFillMonitor.Services;
+using SmartFillMonitor.Services.Logs;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO.Ports;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using SmartFillMonitor.Services;
-using SmartFillMonitor.Services.Logs;
-using System.IO.Ports;
 namespace SmartFillMonitor.ViewModels
 
 {
     public partial class SettingViewModel : ObservableObject
     {
+
+        // === 新增：连接模式选项 ===
+        public ObservableCollection<ConnectionMode> ConnectionModeOptions { get; } = new()
+          {
+              ConnectionMode.Serial,
+              ConnectionMode.ModbusTcp,
+              ConnectionMode.CustomTcp
+          };
+
+
         public ObservableCollection<string> PortNamesOptions { get; } = new ObservableCollection<string>();
         public ObservableCollection<int> BaudRatesOptions { get; } = new ObservableCollection<int>()
         {
@@ -57,6 +68,32 @@ namespace SmartFillMonitor.ViewModels
         [ObservableProperty]
         private bool debugLogMode = false;
 
+
+
+        [ObservableProperty]  // === 新增：模式 + TCP 配置 ===
+        private ConnectionMode selectedMode = ConnectionMode.Serial;
+
+        [ObservableProperty]
+        private string tcpIp = "127.0.0.1";
+
+        [ObservableProperty]
+        private int tcpPort = 502;
+
+        // === 新增：用于 XAML 面板显隐 ===
+        public bool IsSerialMode => SelectedMode == ConnectionMode.Serial;
+        public bool IsTcpMode => SelectedMode != ConnectionMode.Serial;
+
+        // SelectedMode 变化时刷新显隐属性
+        partial void OnSelectedModeChanged(ConnectionMode value)
+        {
+            OnPropertyChanged(nameof(IsSerialMode));
+            OnPropertyChanged(nameof(IsTcpMode));
+        }
+
+
+
+
+
         [RelayCommand]
         private async Task SaveAsync()
         {
@@ -64,6 +101,10 @@ namespace SmartFillMonitor.ViewModels
             {
                 var model = new Models.DeviceSettings
                 {
+                    // === 新增 ===
+                    Mode = SelectedMode,
+                    TcpIp = TcpIp,
+                    TcpPort = TcpPort,
                     PortName = selectedPortName,
                     BaudRate = selectedBaudRate,
                     DataBit = selectedDataBit,
@@ -101,6 +142,12 @@ namespace SmartFillMonitor.ViewModels
         private async void LoadSettings()
         {
             var ds = await Services.ConfigServices.LoadDeviceSettingsAsync();
+
+            // === 新增 ===
+            SelectedMode = ds.Mode;
+            TcpIp = ds.TcpIp;
+            TcpPort = ds.TcpPort;
+
             SelectedPortName = ds.PortName;
             SelectedBaudRate = ds.BaudRate;
             SelectedDataBit = ds.DataBit;

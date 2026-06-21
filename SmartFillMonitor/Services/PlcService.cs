@@ -1,13 +1,14 @@
-﻿using System;
+﻿using Modbus.Device;
+using SmartFillMonitor.Models;
+using SmartFillMonitor.Services.Logs;
+using System;
 using System.Collections.Generic;
+using System.IO.Ports;
 using System.Linq;
+using System.Linq.Expressions;
+using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
-using System.IO.Ports;
-using SmartFillMonitor.Models;
-using Modbus.Device;
-using SmartFillMonitor.Services.Logs;
-using System.Linq.Expressions;
 
 namespace SmartFillMonitor.Services;
 ///<summery>
@@ -23,12 +24,19 @@ namespace SmartFillMonitor.Services;
 
 
     public class PlcService
-    {
+{
+    private static TcpClient?   _tcpClient;
+    private static IModbusMaster? _ipMaster;
+    private static string? _lastTcpIp;
+    private static int _lastTcpPort;
+
+
+
     //串口对象
     private static SerialPort? _serialPort;
 
     //NModbus4提供的Modbus master接口，用于读取/写入寄存器
-    private static IModbusSerialMaster _modbusMaster;
+    private static IModbusSerialMaster? _modbusMaster;
 
     //取消令牌源，用于停止后台轮询任务
     private static CancellationTokenSource? _cts;
@@ -45,11 +53,14 @@ namespace SmartFillMonitor.Services;
 
 
     //当连接状态发生变化时触发该事件(true连上 false断开)
-    public static event EventHandler<bool> ConnectionChanged;
+    public static event EventHandler<bool>? ConnectionChanged;
 
     //只读属性，表示当前是否已经连接上PLC
-    public static bool IsConnected => _serialPort != null && _serialPort.IsOpen;
+    public static bool IsConnected =>
+    (_serialPort != null && _serialPort.IsOpen) ||
+    (_tcpClient != null && _tcpClient.Connected);
 
+    //获取当前系统可用的串口列表
     public static string[] GetAvailablePorts() => SerialPort.GetPortNames();
 
 
@@ -59,9 +70,11 @@ namespace SmartFillMonitor.Services;
         //先断开旧的连接，如果有的，防止资源泄露或重复开闭串口
 
         await DisConnectAsync();
-        if (Settings is { AutoConnect:true})
+        if (Settings is not { AutoConnect: true })  return; 
+          switch(Settings.Mode)
         {
-            _serialPort = new SerialPort
+            case ConnectionMode.Serial:
+                _serialPort = new SerialPort
 
             {
                 PortName = Settings.PortName,
@@ -72,10 +85,65 @@ namespace SmartFillMonitor.Services;
             };
             //尝试连接
             await ConnectAsync();
-        }
+                break;
+            case ConnectionMode.ModbusTcp:
+                await ConnectModbusTcpAsync(Settings.TcpIp, Settings.TcpPort);
+                break;
+            case ConnectionMode.CustomTcp:
+                //不做任何事，由调用方自行 new TcpConnection
+                LogService.Info("CustomTcp 模式需由调用方自行管理 TcpConnection");
+                break;
+           
+
 
         }
 
+        }
+
+    private static async Task ConnectModbusTcpAsync(string tcpIp, int tcpPort)
+    {
+        // 先保存参数，无论连接是否成功，PollDataLoop 启动后都能重连
+        _lastTcpIp = tcpIp;
+        _lastTcpPort = tcpPort;
+
+        var client = new TcpClient();
+        try
+        {
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            var connectTask = client.ConnectAsync(tcpIp, tcpPort);
+            if(await Task.WhenAny(connectTask, Task.Delay(Timeout.Infinite, cts.Token)) != connectTask)
+            {
+                client.Dispose();
+                throw new OperationCanceledException("TCP 连接超时", cts.Token);
+            }
+            await connectTask;
+            _ipMaster = ModbusIpMaster.CreateIp(client);
+            _ipMaster.Transport.ReadTimeout = 1000;
+            _ipMaster.Transport.WriteTimeout = 1000;
+            // Socket 级超时（NetworkStream.ReadTimeout 对异步读无效）
+            client.Client.ReceiveTimeout = 1000;
+            client.Client.SendTimeout = 1000;
+            _tcpClient = client;  // 保存引用，断开时释放
+            LogService.Info($"Modbus TCP 连接成功 {tcpIp}:{tcpPort}");
+            ConnectionChanged?.Invoke(null, true);
+            _cts = new CancellationTokenSource();
+            _= Task.Run(() => PollDataLoop(_cts.Token));
+        }
+        catch (Exception ex)
+        {
+            LogService.Error($"Modbus TCP 连接失败 {tcpIp}:{tcpPort}", ex);
+            client.Dispose();
+            ConnectionChanged?.Invoke(null, false);
+            // 连接失败也启动轮询，在后台自动重连
+            _cts = new CancellationTokenSource();
+            _= Task.Run(() => PollDataLoop(_cts.Token));
+        }
+
+
+
+
+
+    }
 
     private static Parity ParseParity(string s) => Enum.TryParse<Parity>(s, true, out var p)?p:Parity.None;
     private static StopBits ParseStop(string s) => Enum.TryParse<StopBits>(s, true, out var stop) ? stop : StopBits.One;
@@ -143,6 +211,15 @@ namespace SmartFillMonitor.Services;
                 _modbusMaster = null;
 
             }
+            // 先释放上层 Modbus Master，再释放底层 TCP Client
+            _ipMaster?.Dispose();
+            _ipMaster = null;
+            if (_tcpClient != null)
+            {
+                if (_tcpClient.Connected) _tcpClient.Close();
+                _tcpClient.Dispose();
+                _tcpClient = null;
+            }
         }
         catch 
         {
@@ -168,14 +245,26 @@ namespace SmartFillMonitor.Services;
         {
             try
             {
-                if (!IsConnected)
+                if (!IsConnected || (_tcpClient != null && !IsTcpReallyConnected()))
                 {
-                    ConnectionChanged?.Invoke(null, false);
-                    await Task.Delay(1000, token);
-                    continue;
+                    if (IsConnected) ConnectionChanged?.Invoke(null, false);
+                    // TCP 模式尝试轻量重连（不动 _cts，只重建连接）
+                    await TryReconnectTcpAsync();
+                    if (!IsConnected)
+                    {
+                        await Task.Delay(1000, token);
+                        continue;
+                    }
+                    errCount = 0;
 
                 }
-                var state = await ReadStateAsync();
+                // 心跳：ReadStateAsync 限时 2 秒，超时认为连接断开
+                var readTask = ReadStateAsync();
+                var timeoutTask = Task.Delay(2000, token);
+                if (await Task.WhenAny(readTask, timeoutTask) == timeoutTask)
+                    throw new TimeoutException("Modbus 读取超时（2s），连接可能已断开");
+
+                var state = await readTask;
                 if (state != null)
                 {
                     errCount = 0;
@@ -185,10 +274,9 @@ namespace SmartFillMonitor.Services;
                 await Task.Delay(200, token);
 
             }
-            catch (OperationCanceledException ex)
+            catch (OperationCanceledException)
             {
                 break;//收到取消请求，跳出循环
-
             }
 
             catch (Exception ex)
@@ -197,13 +285,17 @@ namespace SmartFillMonitor.Services;
                 if (errCount >= 3)
                 {
                     LogService.Warn($"PLC通讯异常:{ex.Message}");
-                    ConnectionChanged?.Invoke(null, false);
                     errCount = 0;
-
-
+                    // TCP 模式强制重连
+                    await TryReconnectTcpAsync(force: true);
+                    if (IsConnected)
+                    {
+                        // 重连成功，立即重试读数据，不等 1 秒
+                        ConnectionChanged?.Invoke(null, true);
+                        continue;
+                    }
+                    ConnectionChanged?.Invoke(null, false);
                 }
-
-
 
                 await Task.Delay(1000, token);//等待一段时间后重试
 
@@ -212,50 +304,146 @@ namespace SmartFillMonitor.Services;
 
         }
     }
+    private static IModbusMaster? GetCurrentMaster() =>
+    _modbusMaster ?? (IModbusMaster?)_ipMaster; //使得ReadStateAsync可以动态选 Master：
+
+    // 检测 TCP 是否真正存活（TcpClient.Connected 不可靠）
+    private static bool IsTcpReallyConnected()
+    {
+        try
+        {
+            if (_tcpClient?.Client == null) return false;
+            var socket = _tcpClient.Client;
+            // 连接异常（RST）
+            if (socket.Poll(0, SelectMode.SelectError)) return false;
+            // 远端正常关闭（FIN）— 可读且无数据
+            if (socket.Poll(0, SelectMode.SelectRead) && socket.Available == 0) return false;
+            return true;
+        }
+        catch { return false; }
+    }
+
+    // TCP 断开后轻量重连：只重建 TcpClient + _ipMaster，不动 _cts，不启新轮询
+    private static async Task TryReconnectTcpAsync(bool force = false)
+    {
+        if (!force && _ipMaster != null && _tcpClient?.Connected == true) return; // 没断，不用重连
+        if (string.IsNullOrEmpty(_lastTcpIp) || _lastTcpPort <= 0) return;
+        try
+        {
+            // 释放旧连接
+            _ipMaster?.Dispose();
+            _ipMaster = null;
+            if (_tcpClient != null)
+            {
+                try { _tcpClient.Close(); _tcpClient.Dispose(); } catch { }
+                _tcpClient = null;
+            }
+            // 建新连接
+            var client = new TcpClient();
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            var connectTask = client.ConnectAsync(_lastTcpIp, _lastTcpPort);
+            if (await Task.WhenAny(connectTask, Task.Delay(Timeout.Infinite, cts.Token)) != connectTask)
+            {
+                client.Dispose();
+                return;
+            }
+            await connectTask;
+            _ipMaster = ModbusIpMaster.CreateIp(client);
+            _ipMaster.Transport.ReadTimeout = 1000;
+            _ipMaster.Transport.WriteTimeout = 1000;
+            client.Client.ReceiveTimeout = 1000;
+            client.Client.SendTimeout = 1000;
+            _tcpClient = client;
+            LogService.Info($"TCP 重连成功 {_lastTcpIp}:{_lastTcpPort}");
+            ConnectionChanged?.Invoke(null, true);
+        }
+        catch (Exception ex)
+        {
+            LogService.Warn($"TCP 重连失败: {ex.Message}");
+        }
+    }
+
+
+
     //从PLC读取当前设备状态并且封装为DeviceState对象返回
     public static async Task <DeviceStates> ReadStateAsync()
     {
        await _ioLock.WaitAsync();
         try
         {
-            
-            if (_modbusMaster == null) throw new InvalidOperationException("未连接");
-           //1.读取数值区（假设读取10个寄存器）
-            ushort[] registers = await _modbusMaster.ReadHoldingRegistersAsync(SlaveID, 0, 10);
-            //2.读取条码区（假设从地址10开始读取，长度为10个寄存器）
-            const ushort barcodeStart = 10;
-            const ushort barcodeLength = 10;
-            string barcode = string.Empty;
-
-            try
+            // 串口 Modbus RTU 路径 —— 与快照版本一字不差
+            if (_modbusMaster != null)
             {
-                ushort[] barcodeRes = await _modbusMaster.ReadHoldingRegistersAsync(SlaveID, barcodeStart,barcodeLength);
-            barcode = ConverRegisterToString(barcodeRes);
-            
+                if (_modbusMaster == null) throw new InvalidOperationException("未连接");
+               //1.读取数值区（假设读取10个寄存器）
+                ushort[] registers = await _modbusMaster.ReadHoldingRegistersAsync(SlaveID, 0, 10);
+                //2.读取条码区（假设从地址10开始读取，长度为10个寄存器）
+                const ushort barcodeStart = 10;
+                const ushort barcodeLength = 10;
+                string barcode = string.Empty;
+
+                try
+                {
+                    ushort[] barcodeRes = await _modbusMaster.ReadHoldingRegistersAsync(SlaveID, barcodeStart,barcodeLength);
+                barcode = ConverRegisterToString(barcodeRes);
+
+                }
+                catch (Exception ex)
+                {
+
+                    LogService.Warn($"读取条码失败: {ex.Message}");
+
+                }
+                return new DeviceStates
+                {
+                    //生产和时间类数据需要除以100得到实际值
+                    ActualCount = registers[ModbusConfigHelper.ActualCount],
+                    TargetCount = registers[ModbusConfigHelper.TargetCount],
+                    CurrentTemp = Math.Round(registers[ModbusConfigHelper.CurrentTemp]/100.0, 2),
+                    SettingTemp = Math.Round(registers[ModbusConfigHelper.SettingTemp]/100.0, 2),
+                    RunningTime = Math.Round(registers[ModbusConfigHelper.RunningTime]/100.0, 2),
+                    CurrentCycleTime = Math.Round(registers[ModbusConfigHelper.CurrentCycleTime]/100.0, 2),
+                    StandardCycleTime = Math.Round(registers[ModbusConfigHelper.StandardCycleTime]/100.0, 2),
+                    LiquidLevel = Math.Round(registers[ModbusConfigHelper.LiquidLevel]/100.0, 2),
+                    ValueOpen = registers[ModbusConfigHelper.ValueOpen] == 1,//数字1表示打开阀门，0表示关闭
+                    BarCode = barcode
+
+
+                };
             }
-            catch (Exception ex)
-            {
 
-                LogService.Warn($"读取条码失败: {ex.Message}");
-               
+            // 网口 Modbus TCP 路径
+            if (_ipMaster != null)
+            {
+                ushort[] registers = await _ipMaster.ReadHoldingRegistersAsync(SlaveID, 0, 10);
+                const ushort barcodeStart = 10;
+                const ushort barcodeLength = 10;
+                string barcode = string.Empty;
+                try
+                {
+                    ushort[] barcodeRes = await _ipMaster.ReadHoldingRegistersAsync(SlaveID, barcodeStart,barcodeLength);
+                barcode = ConverRegisterToString(barcodeRes);
+                }
+                catch (Exception ex)
+                {
+                    LogService.Warn($"读取条码失败: {ex.Message}");
+                }
+                return new DeviceStates
+                {
+                    ActualCount = registers[ModbusConfigHelper.ActualCount],
+                    TargetCount = registers[ModbusConfigHelper.TargetCount],
+                    CurrentTemp = Math.Round(registers[ModbusConfigHelper.CurrentTemp]/100.0, 2),
+                    SettingTemp = Math.Round(registers[ModbusConfigHelper.SettingTemp]/100.0, 2),
+                    RunningTime = Math.Round(registers[ModbusConfigHelper.RunningTime]/100.0, 2),
+                    CurrentCycleTime = Math.Round(registers[ModbusConfigHelper.CurrentCycleTime]/100.0, 2),
+                    StandardCycleTime = Math.Round(registers[ModbusConfigHelper.StandardCycleTime]/100.0, 2),
+                    LiquidLevel = Math.Round(registers[ModbusConfigHelper.LiquidLevel]/100.0, 2),
+                    ValueOpen = registers[ModbusConfigHelper.ValueOpen] == 1,
+                    BarCode = barcode
+                };
             }
-            return new DeviceStates
-            {
-                //生产和时间类数据需要除以100得到实际值
-                ActualCount = registers[ModbusConfigHelper.ActualCount],
-                TargetCount = registers[ModbusConfigHelper.TargetCount],
-                CurrentTemp = registers[ModbusConfigHelper.CurrentTemp]/100.0,
-                SettingTemp = registers[ModbusConfigHelper.SettingTemp]/100.0,
-                RunningTime = registers[ModbusConfigHelper.RunningTime]/100.0,
-                CurrentCycleTime = registers[ModbusConfigHelper.CurrentCycleTime]/100.0,
-                StandardCycleTime = registers[ModbusConfigHelper.StandardCycleTime]/100.0,
-                LiquidLevel = registers[ModbusConfigHelper.LiquidLevel]/100.0,
-                ValueOpen = registers[ModbusConfigHelper.ValueOpen] == 1,//数字1表示打开阀门，0表示关闭
-                BarCode = barcode
 
-
-            };
-
+            throw new InvalidOperationException("未连接");
         }
         finally
         { _ioLock.Release(); }
@@ -287,8 +475,11 @@ namespace SmartFillMonitor.Services;
         await _ioLock.WaitAsync();
         try
         {
-            if (_modbusMaster == null) return;
-            await _modbusMaster.WriteSingleRegisterAsync(SlaveID, address, (ushort)(value ? 1 : 0));
+
+            var master = GetCurrentMaster();
+            if (master == null) return;
+            await master.WriteSingleRegisterAsync(SlaveID, address, (ushort)(value ? 1 : 0));
+           
             LogService.Info($"写入指令:{command}={value}");
         }
         catch (Exception ex)

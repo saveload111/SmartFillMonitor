@@ -25,6 +25,10 @@ namespace SmartFillMonitor.Views
         public DashBoardView()
         {
             InitializeComponent();
+            // 修复 X 轴标签浮点精度问题（如 0.6 显示为 0.600000000001）
+            TempChart.AxisX[0].LabelFormatter = val => Math.Abs(val % 1) < 1e-10
+                ? val.ToString("F0")
+                : val.ToString("F1");
             var app = Application.Current as App;
             if (app.ServiceProvider != null)
             {

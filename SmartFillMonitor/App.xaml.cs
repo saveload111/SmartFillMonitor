@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+
 using Serilog;
 using SmartFillMonitor.Services;
 using SmartFillMonitor.Services.Logs;
@@ -27,25 +28,34 @@ namespace SmartFillMonitor
         private const string LogTemplate = "[{Timestamp:yyyy-MM-dd HH:mm:ss fff} {Level}]({ThreadId}) {Message:lj}{NewLine}{Exception}";
         private const string LogPath = "logs\\log-.txt";
         private const string DbFilePath = "SmartFillMonitor.db";
-        private const string DbConnectionString = "Data Source=SmartFillMonitor.db";//SQLite数据库的连接字符串，指定数据库文件的位置和名称,给FreeSql使用
+        private const string DbConnectionString = "Data Source=SmartFillMonitor.db";
         public IServiceProvider ServiceProvider { get; private set; }// 保存已经构建的DI服务，让其他类可以解析到依赖
         protected override async void OnStartup(StartupEventArgs e)
         {
            
             base.OnStartup(e);
             SetExceptionHandling();
+            // 先初始化数据库（建表），再启动 Serilog 日志，避免写入冲突
+            await InitializeCoreService();
+
             Configlogging();// 配置日志服务
 
             try
             {
-                var services = new ServiceCollection();// Create a new DI service collection，依赖注入的第一步
+                var services = new ServiceCollection();
                 ConfigureServices(services);
-                ServiceProvider = services.BuildServiceProvider();   //供外部调用
-                await InitializeCoreService();// 初始化核心服务，如数据库连接等
+                ServiceProvider = services.BuildServiceProvider();
                 await InitialLoginFolowAsync();
                 LogService.Debug("Initalizing PLC Service...");
-                var plcSettings = await ConfigServices.LoadDeviceSettingsAsync();
-                await PlcService.Initialize(plcSettings);
+                try
+                {
+                    var plcSettings = await ConfigServices.LoadDeviceSettingsAsync();
+                    await PlcService.Initialize(plcSettings);
+                }
+                catch (Exception ex)
+                {
+                    LogService.Warn($"PLC Service Initialization failed: {ex.Message}");
+                }  
                 LogService.Info("Core Services Initialized successfully");
 
             }
@@ -72,7 +82,6 @@ namespace SmartFillMonitor
             await UserService.InitializeAsync();//确保数据库结构存在
            
         }
-
 
 
         private async Task InitialLoginFolowAsync()

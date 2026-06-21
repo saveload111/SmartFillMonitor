@@ -12,6 +12,7 @@ namespace SmartFillMonitor.Services;
 /// </summary>
 public sealed class TcpConnection : IAsyncDisposable
 {
+ 
     private TcpClient? _client;
     private NetworkStream? _stream;
     private CancellationTokenSource? _cts;
@@ -39,7 +40,7 @@ public sealed class TcpConnection : IAsyncDisposable
 
             if (await Task.WhenAny(connectTask, Task.Delay(Timeout.Infinite, connectToken)) != connectTask)
             {
-                newClient.Dispose();  // 超时了，关闭套接字，不要让后台连接任务变成孤魂野鬼
+                newClient.Dispose();  // 连接超时或取消，释放资源
                 throw new OperationCanceledException(connectToken);
             }
 
@@ -117,4 +118,7 @@ public sealed class TcpConnection : IAsyncDisposable
     }
 
     public ValueTask DisposeAsync() => new(DisconnectAsync());
+
+ 
+  
 }
