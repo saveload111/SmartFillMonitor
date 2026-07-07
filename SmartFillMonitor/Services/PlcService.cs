@@ -223,10 +223,10 @@ namespace SmartFillMonitor.Services;
         {
             if(_serialPort != null)
             {
-                if (_serialPort.IsOpen) _serialPort.Close();
-                _serialPort.Dispose();
+                var old = _serialPort;
                 _serialPort = null;
-
+                try { if (old.IsOpen) old.Close(); } catch { }
+                try { old.Dispose(); } catch { }
             }
 
             if (_modbusMaster != null)
@@ -386,8 +386,12 @@ namespace SmartFillMonitor.Services;
             }
             if (_serialPort != null)
             {
-                try { if (_serialPort.IsOpen) _serialPort.Close(); _serialPort.Dispose(); } catch { }
+                var old = _serialPort;
                 _serialPort = null;
+                try { if (old.IsOpen) old.Close(); } catch { }
+                try { old.Dispose(); } catch { }
+                // 等 Windows 释放端口句柄
+                await Task.Delay(200);
             }
             // 建新连接
             var sp = new SerialPort(_lastPortName, _lastBaudRate, _lastParity, _lastDataBits, _lastStopBits)
