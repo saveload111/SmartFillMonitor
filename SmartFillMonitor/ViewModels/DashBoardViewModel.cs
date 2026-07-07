@@ -83,13 +83,22 @@ namespace SmartFillMonitor.ViewModels
             {
                 TempLiveCharts = new SeriesCollection
                 {
-                    new ColumnSeries
+                    new LineSeries
                     {
-                        Title = "温度趋势",
+                        Title = "实际温度",
                         Values = new ChartValues<double>(),
-                        Fill = Brushes.Gray,
-                        Stroke = Brushes.Blue,
-                        StrokeThickness = 1,
+                        Stroke = Brushes.Cyan,
+                        StrokeThickness = 2,
+                        PointGeometry = null,
+                    },
+                    new LineSeries
+                    {
+                        Title = "设定温度",
+                        Values = new ChartValues<double>(),
+                        Stroke = Brushes.Orange,
+                        StrokeThickness = 2,
+                        PointGeometry = null,
+                        StrokeDashArray = new DoubleCollection { 4, 2 },  // 虚线，一眼看出是设定值
                     }
                 };
             });
@@ -137,35 +146,39 @@ namespace SmartFillMonitor.ViewModels
         {
             _ = Task.Run(async () =>
             {
-                ActualCount = state.ActualCount;
-                TargetCount = state.TargetCount;
-                CurrentCycleTime = state.CurrentCycleTime;
-                SettingTemp = state.SettingTemp;
-                RunningTime = state.RunningTime;
-                CurrentTemp = state.CurrentTemp;
-                StandardCycleTime = state.StandardCycleTime;
-                LiquidLevel = state.LiquidLevel;
-                ValueOpen = state.ValueOpen;
-                var barcode = state.BarCode ?? string.Empty;
-                //如果条码发生变化，记录生产数据，意味着一个新的产品到来
-                if (!string.IsNullOrWhiteSpace(barcode) && barcode != _lastbarCode)
+                try
                 {
-                    _lastbarCode = barcode;
-                    var record = new ProductionRecord
+                    ActualCount = state.ActualCount;
+                    TargetCount = state.TargetCount;
+                    CurrentCycleTime = state.CurrentCycleTime;
+                    SettingTemp = state.SettingTemp;
+                    RunningTime = state.RunningTime;
+                    CurrentTemp = state.CurrentTemp;
+                    StandardCycleTime = state.StandardCycleTime;
+                    LiquidLevel = state.LiquidLevel;
+                    ValueOpen = state.ValueOpen;
+                    var barcode = state.BarCode ?? string.Empty;
+                    if (!string.IsNullOrWhiteSpace(barcode) && barcode != _lastbarCode)
                     {
-                                Time = DateTime.Now,
-                                BatchNo = barcode,
-                                SettingTemp = state.SettingTemp,
-                                ActualCount = state.ActualCount,
-                                ActualTemp = state.CurrentTemp,
-                                TargetCount = state.TargetCount,
-                                IsNG = false,
-                                CycleTime = state.CurrentCycleTime,
-                                Operator = ""
-
-
-                    };
-                    await DbProvider.Fsql.Insert(record).ExecuteAffrowsAsync();
+                        _lastbarCode = barcode;
+                        var record = new ProductionRecord
+                        {
+                            Time = DateTime.Now,
+                            BatchNo = barcode,
+                            SettingTemp = state.SettingTemp,
+                            ActualCount = state.ActualCount,
+                            ActualTemp = state.CurrentTemp,
+                            TargetCount = state.TargetCount,
+                            IsNG = false,
+                            CycleTime = state.CurrentCycleTime,
+                            Operator = ""
+                        };
+                        await DbProvider.Fsql.Insert(record).ExecuteAffrowsAsync();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LogService.Error("OnDataReceived 处理失败", ex);
                 }
             });
 
@@ -176,8 +189,13 @@ namespace SmartFillMonitor.ViewModels
                 if (TempLiveCharts == null || TempLiveCharts.Count == 0) return;
                 TempLiveCharts[0].Values.Add(state.CurrentTemp);
                 if (TempLiveCharts[0].Values.Count > 40)
-                {
                     TempLiveCharts[0].Values.RemoveAt(0);
+
+                if (TempLiveCharts.Count > 1)
+                {
+                    TempLiveCharts[1].Values.Add(state.SettingTemp);
+                    if (TempLiveCharts[1].Values.Count > 40)
+                        TempLiveCharts[1].Values.RemoveAt(0);
                 }
             });
         }
@@ -192,7 +210,7 @@ namespace SmartFillMonitor.ViewModels
                 await PlcService.WriteCommandStateAsync("Start", true);
                 await Task.Delay(2000);
                 DeviceStatus = "运行中...";
-                LogService.Info("发送启动命令到PLC");
+                LogService.Debug("发送启动命令到PLC");
             }
             catch (Exception ex)
             {
@@ -214,7 +232,7 @@ namespace SmartFillMonitor.ViewModels
                 await PlcService.WriteCommandStateAsync("Stop", true);
                 await Task.Delay(2000);
                 DeviceStatus = "已停止";
-                LogService.Info("发送停止命令到PLC");
+                LogService.Debug("发送停止命令到PLC");
             }
             catch (Exception ex)
             {
@@ -243,7 +261,7 @@ namespace SmartFillMonitor.ViewModels
                 await PlcService.WriteCommandStateAsync("Reset", false);
                 DeviceStatus = "已就绪";
                 IndicatorState = LightState.Off;
-                LogService.Info("发送复位脉冲到PLC");
+                LogService.Debug("发送复位脉冲到PLC");
             }
             catch (Exception ex)
             {

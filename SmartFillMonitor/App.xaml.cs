@@ -117,7 +117,7 @@ namespace SmartFillMonitor
         {
             // Configure logging services here
             Log.Logger = new LoggerConfiguration()
-                .MinimumLevel.Debug()
+                .MinimumLevel.Information()
                 .Enrich.WithThreadId()
                 .WriteTo.RichTextBox(LogView, outputTemplate: LogTemplate)
                 .WriteTo.Console(outputTemplate: LogTemplate)
@@ -135,11 +135,11 @@ namespace SmartFillMonitor
             // Register your services and view models here
             // Example:
             services.AddSingleton<AlarmsViewModel>();
-            services.AddTransient<MainWindowViewModel>();
+            services.AddSingleton<MainWindowViewModel>();
             services.AddSingleton<DashBoardViewModel>();
-            services.AddTransient<DashQueryViewModel>();
+            services.AddSingleton<DashQueryViewModel>();
             services.AddSingleton<LogsViewModel>();
-            services.AddTransient<SettingViewModel>();
+            services.AddSingleton<SettingViewModel>();
             services.AddTransient<LoginViewModel>();
         }
         #endregion
@@ -165,7 +165,8 @@ namespace SmartFillMonitor
             //Task内部捕获异常
             TaskScheduler.UnobservedTaskException += (s, e) =>
             {
-                LogService.Error("Task.UnobservedTaskException");
+                var ex = e.Exception?.InnerException ?? e.Exception;
+                LogService.Error($"Task.UnobservedTaskException: {ex?.Message}", ex);
                 e.SetObserved();//标记为已处理
             };
     }
