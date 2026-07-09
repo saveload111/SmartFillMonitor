@@ -316,7 +316,7 @@ namespace SmartFillMonitor.Services;
                 var timeoutTask = Task.Delay(2000, token);
                 if (await Task.WhenAny(readTask, timeoutTask) == timeoutTask)
                 {
-                    _ = readTask.ContinueWith(_ => { }, TaskContinuationOptions.OnlyOnFaulted);
+                    _ = readTask?.ContinueWith(_ => { }, TaskContinuationOptions.OnlyOnFaulted);
                     throw new TimeoutException("Modbus 读取超时（2s），连接可能已断开");
                 }
 
@@ -344,17 +344,15 @@ namespace SmartFillMonitor.Services;
                 {
                     LogService.Debug($"PLC通讯异常:{ex.Message}");
                     errCount = 0;
-                    // 根据当前模式强制重连
+                    // 连续失败 = 已断连，先通知 UI
+                    ConnectionChanged?.Invoke(null, false);
+                    // 强制重连
                     if (_currentMode == ConnectionMode.ModbusTcp)
                         await TryReconnectTcpAsync(force: true);
                     else if (_currentMode == ConnectionMode.Serial)
                         await TryReconnectSerialAsync(force: true);
                     if (IsConnected)
-                    {
-                        // 重连成功，立即重试读数据，不等 1 秒
-                        continue;
-                    }
-                    ConnectionChanged?.Invoke(null, false);
+                        continue; // 重连成功，立即重试读数据
                 }
 
                 await Task.Delay(1000, token);//等待一段时间后重试
