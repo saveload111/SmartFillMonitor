@@ -316,7 +316,7 @@ namespace SmartFillMonitor.Services;
                 var timeoutTask = Task.Delay(2000, token);
                 if (await Task.WhenAny(readTask, timeoutTask) == timeoutTask)
                 {
-                    readTask.ContinueWith(_ => { }, TaskContinuationOptions.OnlyOnFaulted);
+                    _ = readTask.ContinueWith(_ => { }, TaskContinuationOptions.OnlyOnFaulted);
                     throw new TimeoutException("Modbus 读取超时（2s），连接可能已断开");
                 }
 
@@ -333,7 +333,7 @@ namespace SmartFillMonitor.Services;
             catch (OperationCanceledException)
             {
                 // 取消时可能 readTask 还在跑，接住防止 UnobservedTaskException
-                readTask?.ContinueWith(_ => { }, TaskContinuationOptions.OnlyOnFaulted);
+                _ = readTask?.ContinueWith(_ => { }, TaskContinuationOptions.OnlyOnFaulted);
                 break;
             }
 
