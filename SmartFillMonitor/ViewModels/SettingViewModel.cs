@@ -97,22 +97,30 @@ namespace SmartFillMonitor.ViewModels
         [RelayCommand]
         private async Task TestConnectionAsync()
         {
-            // 先保存当前设置
-            await SaveAsync();
-            // 再用当前连接测试
-            if (!PlcService.IsConnected)
-            {
-                System.Windows.MessageBox.Show("当前未连接 PLC，请先设置参数并启动自动连接", "测试连接", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
-                return;
-            }
             try
             {
+                // 先保存当前设置
+                var model = new DeviceSettings
+                {
+                    Mode = SelectedMode, TcpIp = TcpIp, TcpPort = TcpPort,
+                    PortName = SelectedPortName, BaudRate = SelectedBaudRate,
+                    DataBit = SelectedDataBit, StopBit = SelectedStopBit,
+                    Parity = SelectedParity, AutoConnect = AutoConnect,
+                    AlarmSound = AlarmSound, DebugLogMode = DebugLogMode
+                };
+                await ConfigServices.SaveDeviceSettingsAsync(model);
+                // 同步重连并测试
+                await PlcService.Initialize(model);
+
+                if (!PlcService.IsConnected)
+                {
+                    System.Windows.MessageBox.Show("当前未连接 PLC", "测试连接", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                    return;
+                }
                 var state = await PlcService.ReadStateAsync();
                 System.Windows.MessageBox.Show(
                     $"连接成功！PLC 设备响应正常\n产量: {state.ActualCount}\n温度: {state.CurrentTemp}℃\n液位: {state.LiquidLevel}",
-                    "测试连接",
-                    System.Windows.MessageBoxButton.OK,
-                    System.Windows.MessageBoxImage.Information);
+                    "测试连接", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
@@ -141,9 +149,13 @@ namespace SmartFillMonitor.ViewModels
                     DebugLogMode = debugLogMode
                 };
                 await Services.ConfigServices.SaveDeviceSettingsAsync(model);
-                // 立即应用新设置，无需重启
-                await PlcService.Initialize(model);
-                LogService.Info($"设置已保存并应用，模式: {model.Mode}");
+                // 后台重连，不阻塞 UI
+                _ = Task.Run(async () =>
+                {
+                    try { await PlcService.Initialize(model); }
+                    catch (Exception ex) { LogService.Warn($"后台重连失败: {ex.Message}"); }
+                });
+                LogService.Info($"设置已保存，后台切换模式: {model.Mode}");
             }
 
             catch (Exception ex)

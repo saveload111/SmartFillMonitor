@@ -270,8 +270,9 @@ namespace SmartFillMonitor.Services;
             _ioLock.Release();
             //通知订阅者已经断开
             ConnectionChanged?.Invoke(null, false);
-
         }
+        // 等待 Windows 释放端口句柄，防止立即重连时 UnauthorizedAccessException
+        await Task.Delay(200);
     }
 
 
