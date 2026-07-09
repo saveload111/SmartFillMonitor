@@ -190,8 +190,14 @@ namespace SmartFillMonitor.Services;
 
         try
         {
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-            await Task.Run(() => _serialPort.Open(), cts.Token);
+            // Task.Run 内部 try-catch，避免 VS 调试器误报"用户未处理异常"
+            Exception? openError = null;
+            await Task.Run(() =>
+            {
+                try { _serialPort.Open(); }
+                catch (Exception ex) { openError = ex; }
+            });
+            if (openError != null) throw openError;
 
             _modbusMaster = ModbusSerialMaster.CreateRtu(_serialPort);
             _modbusMaster.Transport.ReadTimeout = 1000;
@@ -413,8 +419,14 @@ namespace SmartFillMonitor.Services;
                 ReadTimeout = 1000,
                 WriteTimeout = 1000
             };
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-            await Task.Run(() => sp.Open(), cts.Token);
+            // Task.Run 内部 try-catch，避免 VS 调试器误报
+            Exception? openError = null;
+            await Task.Run(() =>
+            {
+                try { sp.Open(); }
+                catch (Exception ex) { openError = ex; }
+            });
+            if (openError != null) throw openError;
             _serialPort = sp;
             _modbusMaster = ModbusSerialMaster.CreateRtu(sp);
             _modbusMaster.Transport.ReadTimeout = 1000;
