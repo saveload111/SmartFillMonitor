@@ -136,7 +136,7 @@ namespace SmartFillMonitor
                 .Enrich.WithThreadId()
                 .WriteTo.RichTextBox(LogView, outputTemplate: LogTemplate)
                 .WriteTo.Console(outputTemplate: LogTemplate)
-                .WriteTo.File(LogPath, rollingInterval: RollingInterval.Day, outputTemplate: LogTemplate, shared: true)
+                .WriteTo.File(LogPath, rollingInterval: RollingInterval.Day, retainedFileCountLimit: 31, outputTemplate: LogTemplate, shared: true)
                 .WriteTo.SQLite(DbFilePath, tableName: "SystemLog", storeTimestampInUtc: false)
                 .CreateLogger();
 
