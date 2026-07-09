@@ -291,6 +291,7 @@ namespace SmartFillMonitor.Services;
     private static async Task PollDataLoop(CancellationToken token)
     {
         int errCount = 0;
+        Task<DeviceStates>? readTask = null;
         while (!token.IsCancellationRequested)
         {
             try
@@ -311,11 +312,10 @@ namespace SmartFillMonitor.Services;
                     errCount = 0;
                 }
                 // 心跳：ReadStateAsync 限时 2 秒，超时认为连接断开
-                var readTask = ReadStateAsync();
+                readTask = ReadStateAsync();
                 var timeoutTask = Task.Delay(2000, token);
                 if (await Task.WhenAny(readTask, timeoutTask) == timeoutTask)
                 {
-                    // 不抛弃 readTask——等它完成（避免 UnobservedTaskException）
                     readTask.ContinueWith(_ => { }, TaskContinuationOptions.OnlyOnFaulted);
                     throw new TimeoutException("Modbus 读取超时（2s），连接可能已断开");
                 }
@@ -332,7 +332,9 @@ namespace SmartFillMonitor.Services;
             }
             catch (OperationCanceledException)
             {
-                break;//收到取消请求，跳出循环
+                // 取消时可能 readTask 还在跑，接住防止 UnobservedTaskException
+                readTask?.ContinueWith(_ => { }, TaskContinuationOptions.OnlyOnFaulted);
+                break;
             }
 
             catch (Exception ex)
