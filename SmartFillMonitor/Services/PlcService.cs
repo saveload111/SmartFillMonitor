@@ -51,6 +51,8 @@ namespace SmartFillMonitor.Services;
 
     //异步锁：确保同时只有一个读写操作在进行，防止串口冲突
     private static readonly SemaphoreSlim _ioLock = new SemaphoreSlim(1, 1);
+    //初始化锁：防止同时多个 Initialize 调用互相覆盖 _serialPort
+    private static readonly SemaphoreSlim _initLock = new SemaphoreSlim(1, 1);
 
     //Modbus 从站ID,默认为1
     private const byte SlaveID = 1;
@@ -75,9 +77,11 @@ namespace SmartFillMonitor.Services;
 
     public static async Task Initialize(DeviceSettings Settings)
     {
-        //先断开旧的连接，如果有的，防止资源泄露或重复开闭串口
-
-        await DisConnectAsync();
+        await _initLock.WaitAsync();
+        try
+        {
+            //先断开旧的连接，如果有的，防止资源泄露或重复开闭串口
+            await DisConnectAsync();
         if (Settings is not { AutoConnect: true })  return; 
           switch(Settings.Mode)
         {
@@ -105,8 +109,9 @@ namespace SmartFillMonitor.Services;
 
 
         }
-
         }
+        finally { _initLock.Release(); }
+    }
 
     private static async Task ConnectModbusTcpAsync(string tcpIp, int tcpPort)
     {
