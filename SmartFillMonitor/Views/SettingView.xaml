@@ -69,7 +69,10 @@
                 </Border>
 
 
-                <Button Content="保存设置" Width="120" Height="40" HorizontalAlignment="Left" Margin="0,10,0,0" Command="{Binding SaveCommand}"/>
+                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                    <Button Content="保存设置" Width="120" Height="40" Command="{Binding SaveCommand}" Margin="0,0,10,0"/>
+                    <Button Content="测试连接" Width="120" Height="40" Style="{StaticResource OutlineButton}" Command="{Binding TestConnectionCommand}"/>
+                </StackPanel>
             </StackPanel>
         </Border>
         <Border Margin="0,10,0,0" Style="{StaticResource CardStyle}">

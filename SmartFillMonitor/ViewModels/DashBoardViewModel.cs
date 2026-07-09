@@ -207,10 +207,9 @@ namespace SmartFillMonitor.ViewModels
             {
                 DeviceStatus = "启动中...";
                 IndicatorState = LightState.Green;
-                await PlcService.WriteCommandStateAsync("Start", true);
-                await Task.Delay(2000);
-                DeviceStatus = "运行中...";
-                LogService.Debug("发送启动命令到PLC");
+                var ok = await PlcService.WriteCommandStateAsync("Start", true);
+                DeviceStatus = ok ? "运行中..." : "启动失败(PLC未响应)";
+                if (ok) LogService.Debug("发送启动命令到PLC");
             }
             catch (Exception ex)
             {
@@ -229,10 +228,9 @@ namespace SmartFillMonitor.ViewModels
             {
                 DeviceStatus = "停止中...";
                 IndicatorState = LightState.Red;
-                await PlcService.WriteCommandStateAsync("Stop", true);
-                await Task.Delay(2000);
-                DeviceStatus = "已停止";
-                LogService.Debug("发送停止命令到PLC");
+                var ok = await PlcService.WriteCommandStateAsync("Stop", true);
+                DeviceStatus = ok ? "已停止" : "停止失败(PLC未响应)";
+                if (ok) LogService.Debug("发送停止命令到PLC");
             }
             catch (Exception ex)
             {
@@ -256,12 +254,12 @@ namespace SmartFillMonitor.ViewModels
             {
                 DeviceStatus = "复位中...";
                 IndicatorState = LightState.Yellow;
-                await PlcService.WriteCommandStateAsync("Stop", false);
-                await Task.Delay(2000);
-                await PlcService.WriteCommandStateAsync("Reset", false);
-                DeviceStatus = "已就绪";
-                IndicatorState = LightState.Off;
-                LogService.Debug("发送复位脉冲到PLC");
+                var ok1 = await PlcService.WriteCommandStateAsync("Stop", false);
+                var ok2 = await PlcService.WriteCommandStateAsync("Reset", false);
+                var ok = ok1 && ok2;
+                DeviceStatus = ok ? "已就绪" : "复位失败(PLC未响应)";
+                IndicatorState = ok ? LightState.Off : LightState.Red;
+                if (ok) LogService.Debug("发送复位脉冲到PLC");
             }
             catch (Exception ex)
             {

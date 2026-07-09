@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 
 using Serilog;
+using SmartFillMonitor.Models;
 using SmartFillMonitor.Services;
 using SmartFillMonitor.Services.Logs;
 using SmartFillMonitor.ViewModels;
@@ -50,6 +51,20 @@ namespace SmartFillMonitor
                 try
                 {
                     var plcSettings = await ConfigServices.LoadDeviceSettingsAsync();
+                    // 启动时检查串口是否存在
+                    if (plcSettings is { AutoConnect: true, Mode: ConnectionMode.Serial })
+                    {
+                        var ports = System.IO.Ports.SerialPort.GetPortNames();
+                        if (!ports.Contains(plcSettings.PortName))
+                        {
+                            LogService.Warn($"配置的串口 {plcSettings.PortName} 不存在，可用串口: {string.Join(", ", ports)}");
+                            MessageBox.Show(
+                                $"配置的串口 \"{plcSettings.PortName}\" 不存在。\n\n可用串口: {(ports.Length > 0 ? string.Join(", ", ports) : "无")}\n\n请前往设置页面修改串口号。",
+                                "串口不可用",
+                                MessageBoxButton.OK,
+                                MessageBoxImage.Warning);
+                        }
+                    }
                     await PlcService.Initialize(plcSettings);
                 }
                 catch (Exception ex)

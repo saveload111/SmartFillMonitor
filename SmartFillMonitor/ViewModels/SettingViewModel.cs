@@ -95,6 +95,32 @@ namespace SmartFillMonitor.ViewModels
 
 
         [RelayCommand]
+        private async Task TestConnectionAsync()
+        {
+            // 先保存当前设置
+            await SaveAsync();
+            // 再用当前连接测试
+            if (!PlcService.IsConnected)
+            {
+                System.Windows.MessageBox.Show("当前未连接 PLC，请先设置参数并启动自动连接", "测试连接", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                return;
+            }
+            try
+            {
+                var state = await PlcService.ReadStateAsync();
+                System.Windows.MessageBox.Show(
+                    $"连接成功！PLC 设备响应正常\n产量: {state.ActualCount}\n温度: {state.CurrentTemp}℃\n液位: {state.LiquidLevel}",
+                    "测试连接",
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show($"连接失败：{ex.Message}", "测试连接", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+            }
+        }
+
+        [RelayCommand]
         private async Task SaveAsync()
         {
             try
@@ -115,6 +141,9 @@ namespace SmartFillMonitor.ViewModels
                     DebugLogMode = debugLogMode
                 };
                 await Services.ConfigServices.SaveDeviceSettingsAsync(model);
+                // 立即应用新设置，无需重启
+                await PlcService.Initialize(model);
+                LogService.Info($"设置已保存并应用，模式: {model.Mode}");
             }
 
             catch (Exception ex)

@@ -179,9 +179,17 @@ namespace SmartFillMonitor.Services;
         _lastParity = _serialPort.Parity;
         _lastStopBits = _serialPort.StopBits;
 
+        // 端口不存在就别尝试打开了，直接进重连循环
+        if (!SerialPort.GetPortNames().Contains(_lastPortName))
+        {
+            LogService.Warn($"串口 {_lastPortName} 不存在，将进入后台重连");
+            _cts = new CancellationTokenSource();
+            _ = Task.Run(() => PollDataLoop(_cts.Token));
+            return;
+        }
+
         try
         {
-            // 带超时的串口打开（效仿 TCP 的 5 秒 ConnectionTimeout）
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
             await Task.Run(() => _serialPort.Open(), cts.Token);
 
@@ -376,6 +384,11 @@ namespace SmartFillMonitor.Services;
     {
         if (!force && IsSerialReallyConnected()) return;
         if (string.IsNullOrEmpty(_lastPortName)) return;
+        if (!SerialPort.GetPortNames().Contains(_lastPortName))
+        {
+            LogService.Debug($"串口 {_lastPortName} 不存在，跳过重连");
+            return;
+        }
         try
         {
             // 释放旧连接
@@ -558,36 +571,36 @@ namespace SmartFillMonitor.Services;
         return Encoding.ASCII.GetString(bytes.ToArray()).Trim();
     }
 
-    public static async Task WriteCommandStateAsync(string command, bool value)
+    /// <summary>向 PLC 写入控制指令。返回 true 表示指令已成功发送，false 表示跳过（未连接/锁超时/异常）。</summary>
+    public static async Task<bool> WriteCommandStateAsync(string command, bool value)
     {
-        // 先快速检查，避免没 PLC 时白白等待 _ioLock
         if (GetCurrentMaster() == null)
         {
             LogService.Debug($"写入指令跳过（未连接PLC）:{command}={value}");
-            return;
+            return false;
         }
         ushort address = command == "Start" ? (ushort)1 : (ushort)2;
-        // 锁等待最多 500ms，超时就跳过——说明正在读操作中，等也没意义
         if (!await _ioLock.WaitAsync(500))
         {
             LogService.Debug($"写入指令跳过（锁超时）:{command}={value}");
-            return;
+            return false;
         }
         try
         {
-            // 锁内再次检查——等待期间可能被 DisConnectAsync 释放了
             var master = GetCurrentMaster();
             if (master == null)
             {
                 LogService.Debug($"写入指令跳过（锁等待期间PLC断开）:{command}={value}");
-                return;
+                return false;
             }
             await master.WriteSingleRegisterAsync(SlaveID, address, (ushort)(value ? 1 : 0));
             LogService.Debug($"写入指令:{command}={value}");
+            return true;
         }
         catch (Exception ex)
         {
             LogService.Error($"写入指令失败:{command}={value}", ex);
+            return false;
         }
         finally { _ioLock.Release(); }
     }
